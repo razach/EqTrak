@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Metrics - {{ position.ticker }} - EqTrak{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{% url 'portfolio:position_detail' portfolio.portfolio_id position.position_id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Position
+        </a>
+    </div>
+
+    <h1>{{ position.ticker }} Metrics</h1>
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-bold">Position Metrics History</h5>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if metrics_by_type %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Metric</th>
+                                <th class="border-0">Category</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0 text-end">Value</th>
+                                <th class="border-0 text-end">Date</th>
+                                <th class="border-0">Source</th>
+                                <th class="border-0">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric_type, values in metrics_by_type.items %}
+                                {% for value in values %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if metric_type.is_computed %}
+                                                    <span class="badge bg-secondary me-2">
+                                                        <i class="bi bi-calculator"></i>
+                                                    </span>
+                                                {% endif %}
+                                                {{ metric_type.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ metric_type.get_category_display }}</td>
+                                        <td>{{ metric_type.get_data_type_display }}</td>
+                                        <td class="text-end">
+                                            {% if value.value %}
+                                                <span class="fw-semibold">{{ value.value|floatformat:2 }}</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if metric_type.is_computed %}
+                                                <em class="text-muted">Real-time</em>
+                                            {% elif metric_type.name == 'Market Price' %}
+                                                {% if value.date %}
+                                                    <span class="text-warning">{{ value.date|date:"Y-m-d" }}</span>
+                                                {% else %}
+                                                    <span class="text-danger">Not set</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {{ value.date|date:"Y-m-d" }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">{{ value.source }}</span>
+                                        </td>
+                                        <td>
+                                            {% if not metric_type.is_computed %}
+                                                <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id position.position_id value.value_id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Computed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-data fs-4 d-block mb-2"></i>
+                    <p class="text-muted">No metrics found for this position.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

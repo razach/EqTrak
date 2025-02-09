@@ -3,40 +3,85 @@
 {% block title %}My Portfolios - EqTrak{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col">
-        <h1>My Portfolios</h1>
+<div class="container">
+    <!-- Portfolios Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1>My Portfolios</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary">Create New Portfolio</a>
+        </div>
     </div>
-    <div class="col text-end">
-        <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary">Create New Portfolio</a>
-    </div>
-</div>
 
-{% if portfolios %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for portfolio in portfolios %}
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ portfolio.name }}</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">{{ portfolio.currency }}</h6>
-                        {% if portfolio.description %}
-                            <p class="card-text">{{ portfolio.description }}</p>
-                        {% endif %}
-                        <div class="mt-3">
-                            <a href="{% url 'portfolio:portfolio_detail' portfolio.portfolio_id %}" class="btn btn-primary btn-sm">View Details</a>
+    {% if portfolios %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for portfolio in portfolios %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ portfolio.name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ portfolio.currency }}</h6>
+                            {% if portfolio.description %}
+                                <p class="card-text">{{ portfolio.description }}</p>
+                            {% endif %}
+                            <div class="mt-3">
+                                <a href="{% url 'portfolio:portfolio_detail' portfolio.portfolio_id %}" class="btn btn-primary btn-sm">View Details</a>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted">
+                            Created: {{ portfolio.created_at|date:"M d, Y" }}
                         </div>
                     </div>
-                    <div class="card-footer text-muted">
-                        Created: {{ portfolio.created_at|date:"M d, Y" }}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            You don't have any portfolios yet. Create one to get started!
+        </div>
+    {% endif %}
+
+    <!-- Metric Types Section -->
+    <div class="mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Position Metrics</h2>
+            <a href="{% url 'metrics:metric_type_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Define New Metric
+            </a>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for category, metrics in metrics_by_category.items %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ category }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for metric in metrics %}
+                                    <li class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="fw-medium">{{ metric.name }}</span>
+                                                {% if metric.is_system %}
+                                                    <span class="badge bg-secondary ms-2">System</span>
+                                                {% endif %}
+                                            </div>
+                                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                                        </div>
+                                        {% if metric.description %}
+                                            <small class="text-muted d-block">{{ metric.description }}</small>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
-{% else %}
-    <div class="alert alert-info">
-        You don't have any portfolios yet. Create one to get started!
-    </div>
-{% endif %}
+</div>
 {% endblock %} 

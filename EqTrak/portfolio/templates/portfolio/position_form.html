@@ -2,6 +2,21 @@
 
 {% block title %}{{ title }} - EqTrak{% endblock %}
 
+{% block extra_head %}
+<style>
+    .preview-metrics {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    .preview-metrics h5 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="mb-4">
@@ -15,6 +30,21 @@
             <div class="card">
                 <div class="card-body">
                     <h2 class="card-title">{{ title }}</h2>
+                    <!-- Preview Section -->
+                    <div class="preview-metrics d-none" id="metricsPreview">
+                        <h5>Computed Metrics Preview</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Total Shares:</strong> <span id="previewShares">-</span></p>
+                                <p><strong>Average Price:</strong> {{ portfolio.currency }} <span id="previewAvgPrice">-</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Cost Basis:</strong> {{ portfolio.currency }} <span id="previewCostBasis">-</span></p>
+                                <p><strong>Current Value:</strong> {{ portfolio.currency }} <span id="previewValue">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+
                     <form method="post" novalidate>
                         {% csrf_token %}
                         {% for field in form %}
@@ -31,6 +61,64 @@
                                 {% endif %}
                             </div>
                         {% endfor %}
+
+                        <!-- Initial Transaction Fields -->
+                        <div class="mb-3">
+                            <label for="initial_date" class="form-label">Purchase Date</label>
+                            <input type="date" 
+                                   name="initial_date" 
+                                   id="initial_date" 
+                                   class="form-control"
+                                   value="{{ today|date:'Y-m-d' }}"
+                                   max="{{ today|date:'Y-m-d' }}"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="initial_shares" class="form-label">Initial Shares</label>
+                            <input type="number" 
+                                   name="initial_shares" 
+                                   id="initial_shares" 
+                                   class="form-control" 
+                                   step="0.000001" 
+                                   oninput="updatePreview()"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="initial_price" class="form-label">Purchase Price per Share ({{ portfolio.currency }})</label>
+                            <input type="number" 
+                                   name="initial_price" 
+                                   id="initial_price" 
+                                   class="form-control" 
+                                   step="0.01" 
+                                   oninput="updatePreview()"
+                                   required>
+                        </div>
+
+                        <hr class="my-4">
+                        
+                        <!-- Market Price Fields (Optional) -->
+                        <h5 class="mb-3">Current Market Price (Optional)</h5>
+                        <div class="mb-3">
+                            <label for="market_date" class="form-label">Market Price Date</label>
+                            <input type="date" 
+                                   name="market_date" 
+                                   id="market_date" 
+                                   class="form-control"
+                                   value="{{ today|date:'Y-m-d' }}"
+                                   max="{{ today|date:'Y-m-d' }}"
+                                   oninput="validateMarketPrice()">
+                        </div>
+                        <div class="mb-3">
+                            <label for="market_price" class="form-label">Market Price per Share ({{ portfolio.currency }})</label>
+                            <input type="number" 
+                                   name="market_price" 
+                                   id="market_price" 
+                                   class="form-control" 
+                                   step="0.01"
+                                   oninput="validateMarketPrice()">
+                            <div class="form-text">Leave blank if unknown</div>
+                        </div>
+
                         <button type="submit" class="btn btn-primary">{{ submit_text }}</button>
                     </form>
                 </div>
@@ -38,4 +126,52 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+    function validateMarketPrice() {
+        const marketPrice = document.getElementById('market_price');
+        const marketDate = document.getElementById('market_date');
+        
+        // If one field is filled, require the other
+        if (marketPrice.value) {
+            marketDate.required = true;
+        } else {
+            marketDate.required = false;
+        }
+        
+        if (marketDate.value) {
+            marketPrice.required = true;
+        } else {
+            marketPrice.required = false;
+        }
+        
+        // Update preview if market price is provided
+        if (marketPrice.value) {
+            document.getElementById('previewValue').textContent = 
+                (parseFloat(marketPrice.value) * parseFloat(document.getElementById('initial_shares').value)).toFixed(2);
+        }
+    }
+
+    function updatePreview() {
+        const shares = parseFloat(document.getElementById('initial_shares').value) || 0;
+        const price = parseFloat(document.getElementById('initial_price').value) || 0;
+        
+        if (shares > 0 && price > 0) {
+            const costBasis = shares * price;
+            
+            document.getElementById('metricsPreview').classList.remove('d-none');
+            document.getElementById('previewShares').textContent = shares.toFixed(6);
+            document.getElementById('previewAvgPrice').textContent = price.toFixed(2);
+            document.getElementById('previewCostBasis').textContent = costBasis.toFixed(2);
+            
+            // Use market price for current value if available, otherwise use purchase price
+            const marketPrice = parseFloat(document.getElementById('market_price').value) || price;
+            document.getElementById('previewValue').textContent = (shares * marketPrice).toFixed(2);
+        } else {
+            document.getElementById('metricsPreview').classList.add('d-none');
+        }
+    }
+</script>
+{% endblock %}
 {% endblock %} 

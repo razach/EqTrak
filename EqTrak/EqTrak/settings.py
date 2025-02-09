@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     # Local apps will go here
     'portfolio',
     'users',
+    'metrics',
 ]
 
 MIDDLEWARE = [

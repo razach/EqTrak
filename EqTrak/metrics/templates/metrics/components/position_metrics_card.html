@@ -1,0 +1,72 @@
+<!-- Metrics Card -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold">Position Metrics</h5>
+            <a href="{% url 'metrics:position_metrics' portfolio.portfolio_id position.position_id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit Metrics
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Metric</th>
+                        <th class="border-0 text-end">Value</th>
+                        <th class="border-0 text-end">Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metric in position_metrics %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if metric.metric_type.is_computed %}
+                                    <span class="badge bg-secondary me-2">
+                                        <i class="bi bi-calculator"></i>
+                                    </span>
+                                {% endif %}
+                                {{ metric.metric_type.name }}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            {% if metric.value %}
+                                <span class="fw-semibold">{{ metric.value|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-muted small">
+                            {% if metric.metric_type.is_computed %}
+                                <em>Real-time</em>
+                            {% elif metric.metric_type.name == 'Market Price' %}
+                                {% if metric.date %}
+                                    <span class="text-warning">{{ metric.date|date:"Y-m-d" }}</span>
+                                {% else %}
+                                    <span class="text-danger">Not set</span>
+                                {% endif %}
+                            {% else %}
+                                {% if metric.date %}
+                                    {{ metric.date|date:"Y-m-d" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            <i class="bi bi-clipboard-data fs-4 d-block mb-2"></i>
+                            No metrics configured
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div> 

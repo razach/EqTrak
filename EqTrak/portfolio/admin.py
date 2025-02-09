@@ -9,8 +9,8 @@ class PortfolioAdmin(admin.ModelAdmin):
 
 @admin.register(Position)
 class PositionAdmin(admin.ModelAdmin):
-    list_display = ('ticker', 'portfolio', 'position_type', 'shares', 'is_active')
-    list_filter = ('position_type', 'is_active')
+    list_display = ('ticker', 'portfolio', 'position_type', 'is_active')
+    list_filter = ('position_type', 'is_active', 'portfolio')
     search_fields = ('ticker', 'portfolio__name')
 
 @admin.register(Transaction)

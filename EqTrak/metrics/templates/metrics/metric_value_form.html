@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - {{ position.ticker }} - EqTrak{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{% url 'metrics:position_metrics' portfolio.portfolio_id position.position_id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Position Metrics
+        </a>
+    </div>
+
+    <h1>{{ title }}</h1>
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">{{ position.ticker }}</h5>
+                    <p class="text-muted small mb-0">
+                        {% if metric_type.is_computed %}
+                            <span class="badge bg-secondary me-2">
+                                <i class="bi bi-calculator"></i> Computed
+                            </span>
+                        {% endif %}
+                        {{ metric_type.get_data_type_display }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="{{ form.value.id_for_label }}" class="form-label">{{ form.value.label }}</label>
+                    {{ form.value }}
+                    {% if form.value.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.value.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.date.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.notes.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">{{ submit_text }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,5 +1,7 @@
 # Design Document for Stock Tracking Web App
 
+[← Back to Documentation](README.md) | [Templates](templates.md) | [Data Model](Data%20Model.md)
+
 ## Overview
 This web app is designed to help users track their equity positions, analyze stock valuation metrics, and record forecasts on stock valuations. The app will provide tools to manage portfolios, evaluate past investment decisions, and make informed forecasts based on user-defined assumptions. Below is a detailed design document outlining the app's key features, architecture, and user interface.
 
@@ -27,14 +29,14 @@ This web app is designed to help users track their equity positions, analyze sto
 - **Core Functionalities**:
   - Track every buy/sell decision with details like the date, price, and quantity.
   - Detailed notes field
-  - Compare the stock’s performance after the decision (e.g., price change after 1 month, 6 months, etc.).
+  - Compare the stock's performance after the decision (e.g., price change after 1 month, 6 months, etc.).
   - Assign a score (e.g., percentage gain/loss) to each decision and provide aggregate statistics on decision quality.
 - **Data Requirements**:
   - Historical stock price data for comparison.
   - User-specific transaction history stored securely.
 
 ### 3. **Valuation Metrics Analysis**
-- **Purpose**: Help users evaluate whether it’s a good time to buy or sell based on historical valuation data.
+- **Purpose**: Help users evaluate whether it's a good time to buy or sell based on historical valuation data.
 - **Core Functionalities**:
   - Display recent history of key valuation metrics (e.g., P/E ratio, P/B ratio, dividend yield).
   - Provide visualizations like line charts or bar graphs for trends over time.
@@ -62,3 +64,7 @@ This web app is designed to help users track their equity positions, analyze sto
 - **Data Requirements**:
   - User-defined input data stored in the database.
   - Calculation engine to process inputs and generate outputs.
+
+## Related Documentation
+- [Data Model](Data%20Model.md) - Database schema and relationships
+- [Templates](templates.md) - Template structure and components

@@ -16,15 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from portfolio.views import home, custom_logout
+from django.conf import settings
+from django.conf.urls.static import static
+from portfolio import views
 from users.views import SignUpView
 
 # Add a root URL pattern to redirect to portfolio
 urlpatterns = [
-    path('', home, name='home'),  # Redirect root to portfolio
+    path('', views.home, name='home'),  # Redirect root to portfolio
     path('admin/', admin.site.urls),
-    path('accounts/logout/', custom_logout, name='logout'),  # Use our custom logout view
+    path('accounts/logout/', views.custom_logout, name='logout'),  # Use our custom logout view
     path('accounts/', include('django.contrib.auth.urls')),  # Other auth URLs
     path('portfolio/', include('portfolio.urls')),  # We'll create this next
     path('signup/', SignUpView.as_view(), name='signup'),
-]
+    path('metrics/', include('metrics.urls')),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

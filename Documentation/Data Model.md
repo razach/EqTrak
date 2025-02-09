@@ -1,3 +1,7 @@
+# Data Model Documentation
+
+[← Back to Documentation](README.md) | [Templates](templates.md) | [Design Document](Design%20Document.md)
+
 ## Core Data Model
 
 ### **User Table**
@@ -121,3 +125,7 @@
 5. Portfolio → Portfolio Snapshot (1:M)
 6. Position → Metric Values (1:M)
 7. Metric Type → Metric Values (1:M)
+
+## Related Documentation
+- [Templates](templates.md) - Template structure and components
+- [Design Document](Design%20Document.md) - Application design and features

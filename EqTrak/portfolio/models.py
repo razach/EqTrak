@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
+from metrics.models import MetricType, MetricValue
 
 class Portfolio(models.Model):
     portfolio_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -26,15 +28,29 @@ class Position(models.Model):
     portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE)
     ticker = models.CharField(max_length=10)
     position_type = models.CharField(max_length=10, choices=POSITION_TYPES)
-    shares = models.DecimalField(max_digits=15, decimal_places=6, null=True)
-    purchase_price = models.DecimalField(max_digits=15, decimal_places=2, null=True)
-    cost_basis = models.DecimalField(max_digits=15, decimal_places=2, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.ticker} ({self.portfolio.name})"
+
+    def get_latest_market_price(self):
+        """Get the most recent market price from MetricValue"""
+        market_price_metric = MetricType.objects.filter(
+            name='Market Price',
+            is_system=True
+        ).first()
+        
+        if not market_price_metric:
+            return None
+        
+        latest_price = MetricValue.objects.filter(
+            position=self,
+            metric_type=market_price_metric
+        ).order_by('-date').first()
+        
+        return latest_price.value if latest_price else None
 
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
@@ -95,4 +111,6 @@ class Transaction(models.Model):
             return self.quantity
         elif self.transaction_type == 'SELL':
             return -self.quantity
-        return 0 
+        return 0
+
+# Remove MetricType and MetricValue classes 

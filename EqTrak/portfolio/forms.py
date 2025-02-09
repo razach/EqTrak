@@ -12,23 +12,11 @@ class PortfolioForm(forms.ModelForm):
 class PositionForm(forms.ModelForm):
     class Meta:
         model = Position
-        fields = ['ticker', 'position_type', 'shares', 'purchase_price']
+        fields = ['ticker', 'position_type']
         widgets = {
-            'purchase_price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
-            'shares': forms.NumberInput(attrs={'step': '0.000001', 'class': 'form-control'}),
             'ticker': forms.TextInput(attrs={'class': 'form-control'}),
             'position_type': forms.Select(attrs={'class': 'form-control'}),
         }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        shares = cleaned_data.get('shares')
-        purchase_price = cleaned_data.get('purchase_price')
-        
-        if shares and purchase_price:
-            cleaned_data['cost_basis'] = shares * purchase_price
-            
-        return cleaned_data 
 
 class TransactionForm(forms.ModelForm):
     class Meta:
