@@ -31,6 +31,7 @@ media/
 venv/
 env/
 ENV/
+.venv/
 
 # IDE
 .idea/
@@ -49,4 +50,4 @@ Thumbs.db
 Requirements/test_users.md
 
 # Ignore sensitive files
-EqTrak/users/migrations/0002_add_initial_users.py 
+EqTrak/users/migrations/0002_add_initial_users.py .venv/

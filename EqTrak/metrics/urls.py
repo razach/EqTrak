@@ -12,4 +12,6 @@ urlpatterns = [
          views.metric_value_create, name='metric_value_create'),
     path('<uuid:portfolio_id>/position/<uuid:position_id>/<uuid:value_id>/edit/', 
          views.metric_value_edit, name='metric_value_edit'),
+    path('<uuid:portfolio_id>/position/<uuid:position_id>/metric/<uuid:metric_type_id>/update/',
+         views.metric_update, name='metric_update'),
 ] 
