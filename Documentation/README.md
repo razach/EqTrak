@@ -4,19 +4,26 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
 
 ## Core Documentation
 
-1. [Design Document](Design%20Document.md)
+1. [Architecture](Architecture.md)
+   - Project structure
+   - App interactions
+   - Integration points
+   - Template organization
+   - URL structure
+
+2. [Design Document](Design%20Document.md)
    - Overview of the application
    - Key features and functionalities
    - System architecture
    - User interface design
 
-2. [Data Model](Data%20Model.md)
+3. [Data Model](Data%20Model.md)
    - Database schema
    - Table relationships
    - Field descriptions
    - Data types and constraints
 
-3. [Templates](templates.md)
+4. [Templates](templates.md)
    - Template organization
    - Component structure
    - Usage guidelines
@@ -29,11 +36,13 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
 ## Quick Links
 
 ### For Developers
-- [Template Components](templates.md#component-templates)
+- [Project Structure](Architecture.md#project-structure)
+- [App Interactions](Architecture.md#app-interactions)
 - [Data Model Tables](Data%20Model.md#core-data-model)
 - [Key Features](Design%20Document.md#key-features)
 
 ### For Template Development
+- [Template Structure](Architecture.md#template-structure)
 - [Template Best Practices](templates.md#best-practices)
 - [Context Requirements](templates.md#context-requirements)
 - [Styling Guidelines](templates.md#styling) 

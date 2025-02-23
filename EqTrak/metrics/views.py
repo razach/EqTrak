@@ -5,6 +5,8 @@ from portfolio.models import Portfolio, Position
 from .models import MetricType, MetricValue
 from .forms import MetricTypeForm, MetricValueForm, MetricUpdateForm
 import datetime
+from itertools import groupby
+from operator import attrgetter
 
 @login_required
 def metric_type_create(request):
@@ -194,3 +196,50 @@ def metric_update(request, portfolio_id, position_id, metric_type_id):
         'metric': metric,
     }
     return render(request, 'metrics/metric_update.html', context)
+
+@login_required
+def metric_types_list(request):
+    metric_types = MetricType.objects.all().order_by('category', 'name')
+    
+    # Group metrics by category
+    metrics_by_category = {}
+    for category, metrics in groupby(metric_types, key=attrgetter('category')):
+        metrics_by_category[dict(MetricType.CATEGORIES)[category]] = list(metrics)
+    
+    return {
+        'metrics_by_category': metrics_by_category
+    }
+
+def get_position_metrics(position):
+    """Get all metrics for a position"""
+    metric_types = MetricType.objects.all()
+    position_metrics = []
+    
+    for metric_type in metric_types:
+        if metric_type.is_computed:
+            computed_value = metric_type.compute_value(position)
+            metric = MetricValue(
+                position=position,
+                metric_type=metric_type,
+                date=datetime.date.today(),
+                value=computed_value,
+                source='COMPUTED'
+            )
+            position_metrics.append(metric)
+        else:
+            latest_metric = MetricValue.objects.filter(
+                position=position,
+                metric_type=metric_type
+            ).order_by('-date', '-created_at').first()
+            
+            if not latest_metric:
+                latest_metric = MetricValue(
+                    position=position,
+                    metric_type=metric_type,
+                    date=datetime.date.today(),
+                    value=None,
+                    source='USER'
+                )
+            position_metrics.append(latest_metric)
+    
+    return position_metrics

@@ -126,6 +126,50 @@
 6. Position → Metric Values (1:M)
 7. Metric Type → Metric Values (1:M)
 
+## Data Access Patterns
+
+### Global Context Data
+The application uses Django context processors to make certain data globally available:
+
+1. **Metric Types**
+   - **Access Pattern**: Global template access via context processor
+   - **Source**: MetricType model
+   - **Organization**: Grouped by category
+   - **Usage**: Available in all authenticated templates as `metrics_by_category`
+   ```python
+   {
+       'Market Data': [MetricType objects],
+       'Fundamental': [MetricType objects],
+       'Technical': [MetricType objects],
+       'Position': [MetricType objects]
+   }
+   ```
+
+### Common Queries
+
+1. **Position Metrics**
+   ```python
+   MetricValue.objects.filter(
+       position=position,
+       metric_type=metric_type
+   ).order_by('-date', '-created_at')
+   ```
+
+2. **Active Positions**
+   ```python
+   Position.objects.filter(
+       portfolio=portfolio,
+       is_active=True
+   )
+   ```
+
+3. **Position Transactions**
+   ```python
+   Transaction.objects.filter(
+       position=position
+   ).order_by('-date', '-created_at')
+   ```
+
 ## Related Documentation
 - [Templates](templates.md) - Template structure and components
 - [Design Document](Design%20Document.md) - Application design and features
