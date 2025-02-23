@@ -1,18 +1,18 @@
 <!-- Metric Types Section -->
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Position Metrics</h2>
+        <h2>Metrics</h2>
         <a href="{% url 'metrics:metric_type_create' %}" class="btn btn-primary">
             <i class="bi bi-plus"></i> Define New Metric
         </a>
     </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for category, metrics in metrics_by_category.items %}
+        {% for scope_type, metrics in metrics_by_type.items %}
             <div class="col">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">{{ category }}</h5>
+                        <h5 class="card-title mb-0">{{ scope_type }} Metrics</h5>
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
@@ -21,14 +21,23 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <span class="fw-medium">{{ metric.name }}</span>
-                                            {% if metric.is_system %}
-                                                <span class="badge bg-secondary ms-2">System</span>
+                                            {% if metric.is_computed %}
+                                                <span class="badge bg-secondary ms-2">
+                                                    <i class="bi bi-calculator"></i>
+                                                </span>
                                             {% endif %}
                                         </div>
                                         <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
                                     </div>
+                                    {% if metric.tags %}
+                                        <div class="mt-1">
+                                            {% for tag in metric.tags.split %}
+                                                <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                     {% if metric.description %}
-                                        <small class="text-muted d-block">{{ metric.description }}</small>
+                                        <small class="text-muted d-block mt-1">{{ metric.description }}</small>
                                     {% endif %}
                                 </li>
                             {% endfor %}

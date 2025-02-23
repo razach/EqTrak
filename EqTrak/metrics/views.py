@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from portfolio.models import Portfolio, Position
+from portfolio.models import Portfolio, Position, Transaction
 from .models import MetricType, MetricValue
 from .forms import MetricTypeForm, MetricValueForm, MetricUpdateForm
 import datetime
@@ -57,8 +57,8 @@ def position_metrics(request, portfolio_id, position_id):
     portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
     position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     
-    # Get all metrics ordered by computation_order
-    all_metrics = MetricType.objects.all().order_by('computation_order')
+    # Get position-scoped metrics ordered by computation_order
+    all_metrics = MetricType.objects.filter(scope_type='POSITION').order_by('computation_order', 'name')
     metrics_by_type = {}
     
     for metric in all_metrics:
@@ -81,8 +81,19 @@ def position_metrics(request, portfolio_id, position_id):
                 position=position,
                 metric_type=metric
             ).order_by('-date')
+            
+            # Always include the metric, even if it has no values
             if stored_values.exists():
                 metrics_by_type[metric] = list(stored_values)
+            else:
+                # Create an empty metric value to show the metric in the list
+                empty_value = MetricValue(
+                    position=position,
+                    metric_type=metric,
+                    date=datetime.date.today(),
+                    source='USER'
+                )
+                metrics_by_type[metric] = [empty_value]
     
     return render(request, 'metrics/position_metrics.html', {
         'portfolio': portfolio,
@@ -91,48 +102,102 @@ def position_metrics(request, portfolio_id, position_id):
     })
 
 @login_required
-def metric_value_create(request, portfolio_id, position_id):
+def metric_value_create(request, portfolio_id, position_id=None):
     portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
-    position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    position = None
+    if position_id:
+        position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     
     # Get the metric type from query parameters
     metric_type_id = request.GET.get('metric_type')
     if not metric_type_id:
         messages.error(request, 'No metric type specified.')
-        return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+        if position:
+            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+        else:
+            return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
     
     metric_type = get_object_or_404(MetricType, metric_id=metric_type_id)
+    
+    # For transaction metrics, get the transaction
+    transaction = None
+    if metric_type.scope_type == 'TRANSACTION':
+        if not position:
+            messages.error(request, 'Cannot add transaction metrics without a position.')
+            return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+        
+        transaction_id = request.GET.get('transaction_id')
+        if not transaction_id:
+            messages.error(request, 'No transaction specified for transaction metric.')
+            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+        transaction = get_object_or_404(Transaction, transaction_id=transaction_id, position=position)
     
     if request.method == 'POST':
         form = MetricValueForm(request.POST, metric_type=metric_type)
         if form.is_valid():
             metric_value = form.save(commit=False)
-            metric_value.position = position
+            # Set the appropriate object based on scope type
+            if metric_type.scope_type == 'TRANSACTION':
+                metric_value.transaction = transaction
+            elif metric_type.scope_type == 'POSITION':
+                if not position:
+                    messages.error(request, 'Cannot add position metrics without a position.')
+                    return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+                metric_value.position = position
+            else:  # PORTFOLIO scope
+                metric_value.portfolio = portfolio
+            
             metric_value.metric_type = metric_type
             metric_value.source = 'USER'
             metric_value.save()
             messages.success(request, f'{metric_type.name} value added successfully!')
-            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+            
+            # Redirect based on scope type
+            if metric_type.scope_type == 'TRANSACTION':
+                return redirect('metrics:transaction_metrics', 
+                              portfolio_id=portfolio_id, 
+                              position_id=position_id,
+                              transaction_id=transaction.transaction_id)
+            elif metric_type.scope_type == 'POSITION':
+                return redirect('metrics:position_metrics', 
+                              portfolio_id=portfolio_id, 
+                              position_id=position_id)
+            else:  # PORTFOLIO scope
+                return redirect('metrics:portfolio_metrics', 
+                              portfolio_id=portfolio_id)
     else:
         form = MetricValueForm(
             metric_type=metric_type,
             initial={'date': datetime.date.today()}
         )
     
-    return render(request, 'metrics/metric_value_form.html', {
+    context = {
         'form': form,
         'portfolio': portfolio,
-        'position': position,
         'metric_type': metric_type,
         'title': f'Add {metric_type.name} Value',
         'submit_text': 'Add'
-    })
+    }
+    
+    if position:
+        context['position'] = position
+    if transaction:
+        context['transaction'] = transaction
+    
+    return render(request, 'metrics/metric_value_form.html', context)
 
 @login_required
-def metric_value_edit(request, portfolio_id, position_id, value_id):
+def metric_value_edit(request, portfolio_id, position_id=None, value_id=None):
     portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
-    position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
-    metric_value = get_object_or_404(MetricValue, value_id=value_id, position=position)
+    position = None
+    if position_id:
+        position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    
+    # Get the metric value based on scope
+    if position:
+        metric_value = get_object_or_404(MetricValue, value_id=value_id, position=position)
+    else:
+        metric_value = get_object_or_404(MetricValue, value_id=value_id, portfolio=portfolio)
     
     if request.method == 'POST':
         form = MetricValueForm(request.POST, instance=metric_value, metric_type=metric_value.metric_type)
@@ -141,18 +206,35 @@ def metric_value_edit(request, portfolio_id, position_id, value_id):
             metric_value.source = 'USER'  # Update source on edit
             metric_value.save()
             messages.success(request, f'{metric_value.metric_type.name} value updated successfully!')
-            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+            
+            # Redirect based on scope type
+            if metric_value.metric_type.scope_type == 'TRANSACTION':
+                return redirect('metrics:transaction_metrics', 
+                              portfolio_id=portfolio_id, 
+                              position_id=position_id,
+                              transaction_id=metric_value.transaction.transaction_id)
+            elif metric_value.metric_type.scope_type == 'POSITION':
+                return redirect('metrics:position_metrics', 
+                              portfolio_id=portfolio_id, 
+                              position_id=position_id)
+            else:  # PORTFOLIO scope
+                return redirect('metrics:portfolio_metrics', 
+                              portfolio_id=portfolio_id)
     else:
         form = MetricValueForm(instance=metric_value, metric_type=metric_value.metric_type)
     
-    return render(request, 'metrics/metric_value_form.html', {
+    context = {
         'form': form,
         'portfolio': portfolio,
-        'position': position,
         'metric_type': metric_value.metric_type,
         'title': f'Edit {metric_value.metric_type.name} Value',
         'submit_text': 'Update'
-    })
+    }
+    
+    if position:
+        context['position'] = position
+    
+    return render(request, 'metrics/metric_value_form.html', context)
 
 @login_required
 def metric_update(request, portfolio_id, position_id, metric_type_id):
@@ -197,22 +279,32 @@ def metric_update(request, portfolio_id, position_id, metric_type_id):
     }
     return render(request, 'metrics/metric_update.html', context)
 
+def get_metrics_by_type():
+    """Helper function to get metrics grouped by type"""
+    metric_types = MetricType.objects.all().order_by('scope_type', 'computation_order', 'name')
+    
+    # Group metrics by scope type
+    metrics_by_type = {}
+    for metric_type in metric_types:
+        scope_display = dict(MetricType.SCOPE_TYPES)[metric_type.scope_type]
+        if scope_display not in metrics_by_type:
+            metrics_by_type[scope_display] = []
+        metrics_by_type[scope_display].append(metric_type)
+    
+    return metrics_by_type
+
 @login_required
 def metric_types_list(request):
-    metric_types = MetricType.objects.all().order_by('category', 'name')
-    
-    # Group metrics by category
-    metrics_by_category = {}
-    for category, metrics in groupby(metric_types, key=attrgetter('category')):
-        metrics_by_category[dict(MetricType.CATEGORIES)[category]] = list(metrics)
-    
-    return {
-        'metrics_by_category': metrics_by_category
-    }
+    """View to render the metrics list template"""
+    metrics_by_type = get_metrics_by_type()
+    return render(request, 'metrics/components/metric_types_list.html', {
+        'metrics_by_type': metrics_by_type
+    })
 
 def get_position_metrics(position):
     """Get all metrics for a position"""
-    metric_types = MetricType.objects.all()
+    # Get only position-scoped metrics
+    metric_types = MetricType.objects.filter(scope_type='POSITION').order_by('computation_order', 'name')
     position_metrics = []
     
     for metric_type in metric_types:
@@ -243,3 +335,204 @@ def get_position_metrics(position):
             position_metrics.append(latest_metric)
     
     return position_metrics
+
+@login_required
+def metric_history(request, portfolio_id, position_id=None, metric_id=None):
+    """View metric history"""
+    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
+    position = None
+    if position_id:
+        position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    metric_type = get_object_or_404(MetricType, metric_id=metric_id)
+    
+    # Get all values for this metric based on its scope
+    if metric_type.scope_type == 'TRANSACTION':
+        if not position:
+            messages.error(request, 'Cannot view transaction metrics without a position.')
+            return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+        
+        # For transaction metrics, we need the transaction_id from the query params
+        transaction_id = request.GET.get('transaction_id')
+        if not transaction_id:
+            messages.error(request, 'No transaction specified.')
+            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+        
+        transaction = get_object_or_404(Transaction, transaction_id=transaction_id, position=position)
+        values = MetricValue.objects.filter(
+            metric_type=metric_type,
+            transaction=transaction
+        ).order_by('-date')
+        
+        context = {
+            'portfolio': portfolio,
+            'position': position,
+            'transaction': transaction,
+            'metric_type': metric_type,
+            'values': values
+        }
+        
+    elif metric_type.scope_type == 'POSITION':
+        if not position:
+            messages.error(request, 'Cannot view position metrics without a position.')
+            return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+        
+        values = MetricValue.objects.filter(
+            metric_type=metric_type,
+            position=position
+        ).order_by('-date')
+        
+        context = {
+            'portfolio': portfolio,
+            'position': position,
+            'metric_type': metric_type,
+            'values': values
+        }
+        
+    else:  # PORTFOLIO scope
+        values = MetricValue.objects.filter(
+            metric_type=metric_type,
+            portfolio=portfolio
+        ).order_by('-date')
+        
+        context = {
+            'portfolio': portfolio,
+            'metric_type': metric_type,
+            'values': values
+        }
+    
+    return render(request, 'metrics/metric_history.html', context)
+
+@login_required
+def transaction_metrics(request, portfolio_id, position_id, transaction_id):
+    """View for displaying transaction metrics"""
+    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
+    position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    transaction = get_object_or_404(Transaction, transaction_id=transaction_id, position=position)
+    
+    # Get transaction-scoped metrics ordered by computation_order
+    all_metrics = MetricType.objects.filter(scope_type='TRANSACTION').order_by('computation_order', 'name')
+    metrics_by_type = {}
+    
+    for metric in all_metrics:
+        if metric.is_computed:
+            # Compute the value
+            value = metric.compute_value(transaction)
+            if value is not None:
+                computed_value = MetricValue(
+                    transaction=transaction,
+                    metric_type=metric,
+                    date=datetime.date.today(),
+                    value=value,
+                    source='COMPUTED',
+                    is_forecast=False
+                )
+                metrics_by_type[metric] = [computed_value]
+        else:
+            # Get stored values
+            stored_values = MetricValue.objects.filter(
+                transaction=transaction,
+                metric_type=metric
+            ).order_by('-date')
+            
+            # Always include the metric, even if it has no values
+            if stored_values.exists():
+                metrics_by_type[metric] = list(stored_values)
+            else:
+                # Create an empty metric value to show the metric in the list
+                empty_value = MetricValue(
+                    transaction=transaction,
+                    metric_type=metric,
+                    date=datetime.date.today(),
+                    source='USER'
+                )
+                metrics_by_type[metric] = [empty_value]
+    
+    return render(request, 'metrics/transaction_metrics.html', {
+        'portfolio': portfolio,
+        'position': position,
+        'transaction': transaction,
+        'metrics_by_type': metrics_by_type
+    })
+
+@login_required
+def portfolio_metrics(request, portfolio_id):
+    """View for displaying portfolio metrics"""
+    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
+    
+    # Get portfolio-scoped metrics ordered by computation_order
+    all_metrics = MetricType.objects.filter(scope_type='PORTFOLIO').order_by('computation_order', 'name')
+    metrics_by_type = {}
+    
+    for metric in all_metrics:
+        if metric.is_computed:
+            # Compute the value
+            value = metric.compute_value(portfolio)
+            if value is not None:
+                computed_value = MetricValue(
+                    portfolio=portfolio,
+                    metric_type=metric,
+                    date=datetime.date.today(),
+                    value=value,
+                    source='COMPUTED',
+                    is_forecast=False
+                )
+                metrics_by_type[metric] = [computed_value]
+        else:
+            # Get stored values
+            stored_values = MetricValue.objects.filter(
+                portfolio=portfolio,
+                metric_type=metric
+            ).order_by('-date')
+            
+            # Always include the metric, even if it has no values
+            if stored_values.exists():
+                metrics_by_type[metric] = list(stored_values)
+            else:
+                # Create an empty metric value to show the metric in the list
+                empty_value = MetricValue(
+                    portfolio=portfolio,
+                    metric_type=metric,
+                    date=datetime.date.today(),
+                    source='USER'
+                )
+                metrics_by_type[metric] = [empty_value]
+    
+    return render(request, 'metrics/portfolio_metrics.html', {
+        'portfolio': portfolio,
+        'metrics_by_type': metrics_by_type
+    })
+
+def get_portfolio_metrics(portfolio):
+    """Get all metrics for a portfolio"""
+    # Get only portfolio-scoped metrics
+    metric_types = MetricType.objects.filter(scope_type='PORTFOLIO').order_by('computation_order', 'name')
+    portfolio_metrics = []
+    
+    for metric_type in metric_types:
+        if metric_type.is_computed:
+            computed_value = metric_type.compute_value(portfolio)
+            metric = MetricValue(
+                portfolio=portfolio,
+                metric_type=metric_type,
+                date=datetime.date.today(),
+                value=computed_value,
+                source='COMPUTED'
+            )
+            portfolio_metrics.append(metric)
+        else:
+            latest_metric = MetricValue.objects.filter(
+                portfolio=portfolio,
+                metric_type=metric_type
+            ).order_by('-date', '-created_at').first()
+            
+            if not latest_metric:
+                latest_metric = MetricValue(
+                    portfolio=portfolio,
+                    metric_type=metric_type,
+                    date=datetime.date.today(),
+                    value=None,
+                    source='USER'
+                )
+            portfolio_metrics.append(latest_metric)
+    
+    return portfolio_metrics

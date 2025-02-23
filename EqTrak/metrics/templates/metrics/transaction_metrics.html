@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Transaction Metrics - {{ position.ticker }} - EqTrak{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{% url 'portfolio:position_detail' portfolio.portfolio_id position.position_id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Position
+        </a>
+    </div>
+
+    <h1>{{ position.ticker }} - Transaction Metrics</h1>
+    
+    <!-- Transaction Summary Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0 fw-bold">Transaction Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <p class="mb-1 text-muted">Type</p>
+                    <p class="fw-bold">{{ transaction.get_transaction_type_display }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1 text-muted">Quantity</p>
+                    <p class="fw-bold">{{ transaction.quantity }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1 text-muted">Price</p>
+                    <p class="fw-bold">{{ transaction.currency }} {{ transaction.price }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1 text-muted">Date</p>
+                    <p class="fw-bold">{{ transaction.date|date:"Y-m-d" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-bold">Transaction Metrics Summary</h5>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if metrics_by_type %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Metric</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0">Tags</th>
+                                <th class="border-0 text-end">Value</th>
+                                <th class="border-0 text-end">Date</th>
+                                <th class="border-0">Source</th>
+                                <th class="border-0">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric_type, values in metrics_by_type.items %}
+                                {% with value=values|first %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if metric_type.is_computed %}
+                                                    <span class="badge bg-secondary me-2">
+                                                        <i class="bi bi-calculator"></i>
+                                                    </span>
+                                                {% endif %}
+                                                {{ metric_type.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ metric_type.get_data_type_display }}</td>
+                                        <td>
+                                            {% if metric_type.tags %}
+                                                {% for tag in metric_type.tags.split %}
+                                                    <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if metric_type.data_type == 'MEMO' %}
+                                                {% if value.text_value %}
+                                                    <div class="text-start">
+                                                        <pre class="mb-0" style="white-space: pre-wrap;">{{ value.text_value }}</pre>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if value.value %}
+                                                    <span class="fw-semibold">{{ value.value|floatformat:2 }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if metric_type.is_computed %}
+                                                <em class="text-muted">Real-time</em>
+                                            {% elif value.date %}
+                                                {{ value.date|date:"Y-m-d" }}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">{{ value.source }}</span>
+                                        </td>
+                                        <td>
+                                            {% if not metric_type.is_computed %}
+                                                <div class="btn-group">
+                                                    <a href="{% url 'metrics:position_metric_history' portfolio.portfolio_id position.position_id metric_type.metric_id %}?transaction_id={{ transaction.transaction_id }}" 
+                                                       class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-clock-history"></i> History
+                                                    </a>
+                                                    {% if metric_type.data_type == 'MEMO' %}
+                                                        <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}&transaction_id={{ transaction.transaction_id }}" 
+                                                           class="btn btn-sm btn-outline-success">
+                                                            <i class="bi bi-plus"></i> Add Entry
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Computed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-data fs-4 d-block mb-2"></i>
+                    <p class="text-muted">No metrics found for this transaction.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

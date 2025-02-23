@@ -7,7 +7,7 @@ from .forms import PortfolioForm, PositionForm, TransactionForm
 import datetime
 from itertools import groupby
 from operator import attrgetter
-from metrics.views import get_position_metrics
+from metrics.views import get_position_metrics, get_portfolio_metrics
 from metrics.models import MetricType, MetricValue
 
 # Create your views here.
@@ -15,8 +15,16 @@ from metrics.models import MetricType, MetricValue
 @login_required
 def portfolio_list(request):
     portfolios = Portfolio.objects.filter(user=request.user, is_active=True)
+    # Get system metrics for portfolios
+    portfolio_metrics = MetricType.objects.filter(
+        scope_type='PORTFOLIO',
+        is_system=True,
+        data_type__in=['CURRENCY', 'PERCENTAGE']  # Only show currency and percentage metrics
+    ).exclude(data_type='MEMO').order_by('computation_order', 'name')
+    
     return render(request, 'portfolio/portfolio_list.html', {
-        'portfolios': portfolios
+        'portfolios': portfolios,
+        'portfolio_metrics': portfolio_metrics
     })
 
 @login_required
@@ -47,12 +55,18 @@ def custom_logout(request):
     logout(request)
     return redirect('home')
 
+@login_required
 def portfolio_detail(request, portfolio_id):
-    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id)
+    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
     positions = portfolio.position_set.filter(is_active=True)  # Get active positions
+    portfolio_metrics = get_portfolio_metrics(portfolio)  # Get portfolio metrics
+    position_metrics = Position.get_display_metrics()  # Get position system metrics
+    
     return render(request, 'portfolio/portfolio_detail.html', {
         'portfolio': portfolio,
-        'positions': positions
+        'positions': positions,
+        'portfolio_metrics': portfolio_metrics,
+        'position_metrics': position_metrics
     })
 
 @login_required
@@ -179,4 +193,32 @@ def transaction_create(request, portfolio_id, position_id):
         'position': position,
         'title': f'Add {dict(Transaction.TRANSACTION_TYPES).get(initial_data["transaction_type"], "New")} Transaction',
         'submit_text': 'Add'
+    })
+
+@login_required
+def transaction_edit(request, portfolio_id, position_id, transaction_id):
+    portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id, user=request.user)
+    position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    transaction = get_object_or_404(Transaction, transaction_id=transaction_id, position=position)
+    
+    if request.method == 'POST':
+        form = TransactionForm(request.POST, instance=transaction)
+        if form.is_valid():
+            transaction = form.save(commit=False)
+            transaction.position = position  # Ensure position is set
+            transaction.currency = portfolio.currency  # Ensure currency matches portfolio
+            transaction.save()
+            
+            messages.success(request, 'Transaction updated successfully!')
+            return redirect('portfolio:position_detail', portfolio_id=portfolio_id, position_id=position_id)
+    else:
+        form = TransactionForm(instance=transaction)
+    
+    return render(request, 'portfolio/transaction_form.html', {
+        'form': form,
+        'portfolio': portfolio,
+        'position': position,
+        'transaction': transaction,
+        'title': f'Edit {transaction.get_transaction_type_display()} Transaction',
+        'submit_text': 'Update'
     })

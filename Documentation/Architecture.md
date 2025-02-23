@@ -16,6 +16,8 @@ EqTrak/
 │   ├── views.py           # Portfolio-related views
 │   ├── urls.py            # Portfolio URL patterns
 │   ├── forms.py           # Portfolio-related forms
+│   ├── templatetags/      # Custom template filters
+│   │   └── portfolio_filters.py  # Portfolio-specific filters
 │   └── templates/
 │       └── portfolio/     # Portfolio templates
 │           ├── components/
@@ -30,6 +32,7 @@ EqTrak/
 │   ├── urls.py           # Metrics URL patterns
 │   ├── forms.py          # Metric-related forms
 │   ├── context_processors.py  # Global metric context
+│   ├── templatetags/    # Custom template filters
 │   └── templates/
 │       └── metrics/      # Metrics templates
 │           ├── components/
@@ -70,13 +73,19 @@ EqTrak/
 ### Metrics App
 - **Primary Purpose**: Handles metric types and values
 - **Dependencies**:
-  - Portfolio app for position data
+  - Portfolio app for position, portfolio, and transaction data
 - **Key Features**:
-  - Metric type definitions
-  - Metric value tracking
-  - Computed metrics
+  - Metric type definitions (system and user-defined)
+  - Metric value tracking with support for:
+    - Numeric and memo-type values
+    - Computed metrics with dependencies
+    - Forecasting with scenarios
+    - Confidence scoring
+  - Automated computation system
+  - Validation framework
 - **Global Context**:
   - Provides metric types to all templates via context processor
+  - Groups metrics by scope type (Position, Portfolio, Transaction)
 
 ### Users App
 - **Primary Purpose**: User authentication and profiles

@@ -15,6 +15,7 @@
                 <thead class="table-light">
                     <tr>
                         <th class="border-0">Metric</th>
+                        <th class="border-0">Tags</th>
                         <th class="border-0 text-end">Value</th>
                         <th class="border-0 text-end">Last Updated</th>
                     </tr>
@@ -30,13 +31,33 @@
                                     </span>
                                 {% endif %}
                                 {{ metric.metric_type.name }}
+                                <small class="text-muted ms-2">({{ metric.metric_type.get_scope_type_display }})</small>
                             </div>
                         </td>
-                        <td class="text-end">
-                            {% if metric.value %}
-                                <span class="fw-semibold">{{ metric.value|floatformat:2 }}</span>
+                        <td>
+                            {% if metric.metric_type.tags %}
+                                {% for tag in metric.metric_type.tags.split %}
+                                    <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                                {% endfor %}
                             {% else %}
                                 <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if metric.metric_type.data_type == 'MEMO' %}
+                                {% if metric.text_value %}
+                                    <div class="text-start">
+                                        <pre class="mb-0" style="white-space: pre-wrap;">{{ metric.text_value|truncatechars:100 }}</pre>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% else %}
+                                {% if metric.value %}
+                                    <span class="fw-semibold">{{ metric.value|floatformat:2 }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td class="text-end text-muted small">
@@ -59,7 +80,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center text-muted py-4">
+                        <td colspan="4" class="text-center text-muted py-4">
                             <i class="bi bi-clipboard-data fs-4 d-block mb-2"></i>
                             No metrics configured
                         </td>

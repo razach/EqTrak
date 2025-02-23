@@ -1,65 +1,74 @@
 <!-- Transactions Card -->
 <div class="card">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Transactions</h5>
-            <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" id="addTransactionDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-plus"></i> Add Transaction
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="addTransactionDropdown">
-                    <li><a class="dropdown-item" href="{% url 'portfolio:transaction_create' portfolio.portfolio_id position.position_id %}?type=BUY">Buy</a></li>
-                    <li><a class="dropdown-item" href="{% url 'portfolio:transaction_create' portfolio.portfolio_id position.position_id %}?type=SELL">Sell</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{% url 'portfolio:transaction_create' portfolio.portfolio_id position.position_id %}?type=DIVIDEND">Dividend</a></li>
-                    <li><a class="dropdown-item" href="{% url 'portfolio:transaction_create' portfolio.portfolio_id position.position_id %}?type=SPLIT">Stock Split</a></li>
-                </ul>
-            </div>
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold">Transactions</h5>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+                <i class="bi bi-plus"></i> Add Transaction
+            </button>
         </div>
-
-        {% if transactions %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Date</th>
+                        <th class="border-0">Type</th>
+                        <th class="border-0">Quantity</th>
+                        <th class="border-0">Price</th>
+                        <th class="border-0">Fees</th>
+                        <th class="border-0">Total</th>
+                        <th class="border-0">Status</th>
+                        <th class="border-0">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in position.transaction_set.all|dictsort:"date" %}
                         <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Fees</th>
-                            <th>Total</th>
-                            <th>Status</th>
+                            <td>{{ transaction.date|date:"Y-m-d" }}</td>
+                            <td>{{ transaction.get_transaction_type_display }}</td>
+                            <td>{{ transaction.quantity }}</td>
+                            <td>{{ transaction.currency }} {{ transaction.price }}</td>
+                            <td>{{ transaction.currency }} {{ transaction.fees }}</td>
+                            <td>{{ transaction.currency }} {{ transaction.total_with_fees }}</td>
+                            <td>
+                                <span class="badge {% if transaction.status == 'COMPLETED' %}bg-success{% elif transaction.status == 'PENDING' %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'metrics:transaction_metrics' portfolio.portfolio_id position.position_id transaction.transaction_id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-graph-up"></i> Metrics
+                                    </a>
+                                    <a href="{% url 'portfolio:transaction_edit' portfolio.portfolio_id position.position_id transaction.transaction_id %}" 
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in transactions %}
-                            <tr>
-                                <td>{{ transaction.date }}</td>
-                                <td>{{ transaction.get_transaction_type_display }}</td>
-                                <td>{{ transaction.quantity }}</td>
-                                <td>{{ portfolio.currency }} {{ transaction.price }}</td>
-                                <td>{{ portfolio.currency }} {{ transaction.fees }}</td>
-                                <td>{{ portfolio.currency }} {{ transaction.total_amount }}</td>
-                                <td>{{ transaction.get_status_display }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-secondary">
-                            <td colspan="2"><strong>Totals</strong></td>
-                            <td>{{ position.shares }}</td>
-                            <td>{{ portfolio.currency }} {{ position.purchase_price }}</td>
-                            <td>-</td>
-                            <td>{{ portfolio.currency }} {{ position.cost_basis }}</td>
-                            <td>-</td>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="bi bi-cash fs-4 d-block mb-2"></i>
+                                <p class="text-muted">No transactions recorded yet.</p>
+                            </td>
                         </tr>
-                    </tfoot>
-                </table>
-            </div>
-        {% else %}
-            <div class="text-center py-4">
-                <p class="text-muted">No transactions found for this position.</p>
-            </div>
-        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="3"><strong>Totals</strong></td>
+                        <td>{{ position.portfolio.currency }}</td>
+                        <td>{{ position.portfolio.currency }}</td>
+                        <td>{{ position.portfolio.currency }}</td>
+                        <td colspan="2">-</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 </div> 

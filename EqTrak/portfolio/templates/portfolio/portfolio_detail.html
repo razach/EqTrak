@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load portfolio_filters %}
 
 {% block title %}{{ portfolio.name }} - EqTrak{% endblock %}
 
@@ -22,6 +23,8 @@
         </div>
     </div>
 
+    {% include 'metrics/components/portfolio_metrics_card.html' %}
+
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -38,9 +41,9 @@
                             <tr>
                                 <th>Ticker</th>
                                 <th>Type</th>
-                                <th>Shares</th>
-                                <th>Purchase Price</th>
-                                <th>Cost Basis</th>
+                                {% for metric in position_metrics %}
+                                    <th class="text-end">{{ metric.name }}</th>
+                                {% endfor %}
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -53,17 +56,62 @@
                                         </a>
                                     </td>
                                     <td>{{ position.get_position_type_display }}</td>
-                                    <td>{{ position.shares }}</td>
-                                    <td>{{ portfolio.currency }} {{ position.purchase_price }}</td>
-                                    <td>{{ portfolio.currency }} {{ position.cost_basis }}</td>
+                                    {% for metric in position_metrics %}
+                                        <td class="text-end">
+                                            {% with display_value=position|metric_display_value:metric.name %}
+                                                {% if display_value %}
+                                                    {% if metric.name == 'Position Gain/Loss' %}
+                                                        {% with numeric_value=display_value|cut:'%'|stringformat:'f' %}
+                                                            <span class="{% if numeric_value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                                {{ display_value }}
+                                                            </span>
+                                                        {% endwith %}
+                                                    {% else %}
+                                                        {{ display_value }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                    {% endfor %}
                                     <td>
-                                        <a href="{% url 'portfolio:position_delete' portfolio.portfolio_id position.position_id %}" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        <div class="btn-group">
+                                            <a href="{% url 'metrics:position_metrics' portfolio.portfolio_id position.position_id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-graph-up"></i>
+                                            </a>
+                                            <a href="{% url 'portfolio:position_delete' portfolio.portfolio_id position.position_id %}" 
+                                               class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
+                        {% if positions %}
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="2"><strong>Portfolio Totals</strong></td>
+                                    <td colspan="{{ position_metrics|length }}">
+                                        <div class="d-flex justify-content-between">
+                                            {% with total_value=portfolio|portfolio_metric_value:'Total Portfolio Value' %}
+                                                <span>Total Value: {{ portfolio.currency }} {{ total_value|default:0|floatformat:2 }}</span>
+                                            {% endwith %}
+                                            {% with portfolio_return=portfolio|portfolio_metric_value:'Portfolio Return' %}
+                                                <span>Return: 
+                                                    <span class="{% if portfolio_return >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                        {{ portfolio_return|default:0|floatformat:2 }}%
+                                                    </span>
+                                                </span>
+                                            {% endwith %}
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        {% endif %}
                     </table>
                 </div>
             {% else %}

@@ -43,9 +43,22 @@ Reusable components are stored in a `components/` directory within each app's te
      - Real-time computed metrics display
      - Market price with date indicators
      - Visual indicators for metric types (computed vs manual)
+     - Support for memo-type metrics
+     - Forecast scenario indicators
+     - Confidence score display
      - Link to full metrics history
 
-2. `portfolio/components/transactions_card.html`
+2. `metrics/components/metric_types_list.html`
+   - Displays available metric types grouped by scope
+   - Used in metric type management
+   - Features:
+     - Grouped by scope type (Position, Portfolio, Transaction)
+     - System vs user-defined indicators
+     - Computation status and dependencies
+     - Data type indicators
+     - Tag-based filtering
+
+3. `portfolio/components/transactions_card.html`
    - Displays transactions for a position
    - Used in position detail view
    - Features: transaction list, add transaction dropdown
@@ -126,4 +139,50 @@ All templates use Bootstrap 5 for styling and layout. Common components include:
 
 ## Related Documentation
 - [Data Model](Data%20Model.md) - Database schema and relationships
-- [Design Document](Design%20Document.md) - Application design and features 
+- [Design Document](Design%20Document.md) - Application design and features
+
+## Template Filters
+The application uses custom template filters to format and display data consistently across templates.
+
+### Portfolio Filters
+Located in `portfolio/templatetags/portfolio_filters.py`:
+
+1. `metric_display_value`
+   - **Usage**: `{{ position|metric_display_value:metric_name }}`
+   - **Purpose**: Formats metric values with appropriate currency symbols and decimal places
+   - **Features**:
+     - Adds currency symbol for monetary values
+     - Adds % symbol for percentage values
+     - Formats decimals consistently
+     - Returns None gracefully
+
+2. `portfolio_metric_value`
+   - **Usage**: `{{ portfolio|portfolio_metric_value:metric_name }}`
+   - **Purpose**: Retrieves and formats portfolio-level metric values
+   - **Features**:
+     - Handles system metrics
+     - Returns raw value for template formatting
+
+### Using Template Filters
+1. Load the filters at the top of your template:
+   ```django
+   {% load portfolio_filters %}
+   ```
+
+2. Apply filters in your template:
+   ```django
+   {% with value=portfolio|portfolio_metric_value:"Total Value" %}
+       {% if value %}
+           {{ portfolio.currency }} {{ value|floatformat:2 }}
+       {% else %}
+           <span class="text-muted">—</span>
+       {% endif %}
+   {% endwith %}
+   ```
+
+### Best Practices
+1. Use template filters for consistent formatting
+2. Combine with built-in filters when needed (e.g., `floatformat`, `default`)
+3. Handle None values gracefully
+4. Use descriptive filter names
+5. Document filter parameters in code 

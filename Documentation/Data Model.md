@@ -83,25 +83,60 @@
 |-------------|---------|----------|---------------------------------------|
 | metric_id   | UUID    | Yes      | Primary identifier                    |
 | name        | String  | Yes      | Metric name                           |
-| category    | Enum    | Yes      | MARKET_DATA, FUNDAMENTAL, TECHNICAL   |
-| data_type   | Enum    | Yes      | PRICE, RATIO, VOLUME, PERCENTAGE     |
+| scope_type  | Enum    | Yes      | POSITION, TRANSACTION, PORTFOLIO      |
+| data_type   | Enum    | Yes      | PRICE, RATIO, VOLUME, PERCENTAGE, SHARES, CURRENCY, MEMO |
 | description | Text    | No       | Description of the metric             |
 | is_system   | Boolean | Yes      | System or user-defined metric         |
+| tags        | String  | No       | User-defined tags for organization    |
+| is_computed | Boolean | Yes      | Whether metric is computed            |
+| computation_source | String | No  | Source field for computed metrics    |
+| computation_order | Integer | No  | Order of computation                 |
+| computation_dependencies | M2M | No | Dependencies for computed metrics   |
+
+The `scope_type` field determines which entity the metric is associated with:
+- POSITION: Metrics that track position-level data (e.g., shares, cost basis, current value)
+- TRANSACTION: Metrics that track transaction-level data (e.g., fees, exchange rates)
+- PORTFOLIO: Metrics that track portfolio-level data (e.g., total value, cash balance)
+
+Computed metrics use the following sources:
+- shares: Total shares calculation
+- avg_price: Average purchase price
+- cost_basis: Total cost basis
+- current_value: Current position value
+- position_gain: Position gain/loss percentage
+- total_value: Total portfolio value
+- cash_balance: Portfolio cash balance
+- portfolio_return: Portfolio return calculation
+- transaction_impact: Transaction impact calculation
+- fee_percentage: Transaction fee percentage
+
+Tags allow users to organize metrics into custom categories (e.g., "Fundamental", "Technical", "Risk") while maintaining the core structure based on scope_type.
 
 ### **Metric Values Table**
 
 | Field       | Type      | Required | Description                      |
 |-------------|-----------|----------|----------------------------------|
 | value_id    | UUID      | Yes      | Primary identifier               |
-| position_id | UUID      | Yes      | Related position                 |
-| metric_id   | UUID      | Yes      | Reference to metric type         |
+| position    | UUID      | No       | Related position (conditional)   |
+| portfolio   | UUID      | No       | Related portfolio (conditional)  |
+| transaction | UUID      | No       | Related transaction (conditional)|
+| metric_type | UUID      | Yes      | Reference to metric type         |
 | date        | Date      | Yes      | Date of the value                |
-| value       | Decimal   | Yes      | The actual value                 |
-| source      | String    | Yes      | Data source or 'USER' for forecasts|
+| value       | Decimal   | No       | The numeric value                |
+| text_value  | Text      | No       | Text content for memo-type metrics|
+| source      | String    | Yes      | Data source or 'USER' for manual |
 | confidence  | Decimal   | No       | Confidence score (0-1)           |
 | is_forecast | Boolean   | Yes      | Actual or forecasted             |
 | scenario    | Enum      | No       | NULL, BASE, BULL, BEAR           |
 | notes       | Text      | No       | Any relevant notes               |
+| created_at  | Timestamp | Yes      | Creation timestamp               |
+| updated_at  | Timestamp | Yes      | Last update timestamp            |
+
+**Important Notes:**
+1. Only one of position, portfolio, or transaction can be set, based on the metric_type's scope_type
+2. For memo-type metrics, text_value is used instead of value
+3. Computed metrics are automatically calculated based on their computation_source
+4. The source field indicates if the value was manually entered ('USER') or computed ('COMPUTED')
 
 ## **Position Analytics Table**
 
