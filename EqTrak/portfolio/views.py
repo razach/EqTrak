@@ -8,6 +8,7 @@ import datetime
 from itertools import groupby
 from operator import attrgetter
 from metrics.views import get_position_metrics
+from metrics.models import MetricType, MetricValue
 
 # Create your views here.
 
