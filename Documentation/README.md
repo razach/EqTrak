@@ -10,6 +10,7 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
    - Integration points
    - Template organization
    - URL structure
+   - Docker development setup
 
 2. [Design Document](Design%20Document.md)
    - Overview of the application
@@ -29,6 +30,30 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
    - Usage guidelines
    - Styling conventions
 
+## Development Setup
+
+### Using Docker (Recommended)
+1. Prerequisites:
+   - Docker
+   - Docker Compose
+
+2. Quick Start:
+   ```bash
+   # Clone the repository
+   git clone [repository-url]
+   cd EqTrak
+
+   # Start the development environment
+   docker-compose up --build
+   ```
+
+3. Access:
+   - Application: http://localhost:8000
+   - Admin Panel: http://localhost:8000/admin
+
+### Traditional Setup
+See [Architecture](Architecture.md#development-setup) for traditional setup instructions.
+
 ## Development Resources
 
 - [Test Users](test_users.md) (Development environment only)
@@ -40,6 +65,7 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
 - [App Interactions](Architecture.md#app-interactions)
 - [Data Model Tables](Data%20Model.md#core-data-model)
 - [Key Features](Design%20Document.md#key-features)
+- [Docker Setup](Architecture.md#docker-development)
 
 ### For Template Development
 - [Template Structure](Architecture.md#template-structure)
