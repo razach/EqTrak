@@ -49,3 +49,6 @@ Thumbs.db
 
 # Test credentials
 Requirements/test_users.md
+
+# Test data
+EqTrak/users/migrations/0002_add_initial_users.py
