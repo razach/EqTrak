@@ -51,3 +51,4 @@ Requirements/test_users.md
 
 # Ignore sensitive files
 EqTrak/users/migrations/0002_add_initial_users.py .venv/
+.venv/
