@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DEBUG=True
 
 # Set work directory
-WORKDIR /app
+WORKDIR /workspace
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,11 +21,8 @@ RUN apt-get update && apt-get install -y \
 COPY EqTrak/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
-
-# Create static and media directories
-RUN mkdir -p /app/staticfiles /app/media
+# Create static directory
+RUN mkdir -p /workspace/staticfiles
 
 # Expose port
 EXPOSE 8000
@@ -35,5 +32,5 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Command to run on container start
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["python", "EqTrak/manage.py", "runserver", "0.0.0.0:8000"]

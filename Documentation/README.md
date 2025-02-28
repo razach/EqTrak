@@ -32,24 +32,32 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
 
 ## Development Setup
 
-### Using Docker (Recommended)
+### Using Docker for Local Development
 1. Prerequisites:
    - Docker
-   - Docker Compose
 
-2. Quick Start:
+2. Quick Start with Docker:
    ```bash
    # Clone the repository
    git clone [repository-url]
    cd EqTrak
 
-   # Start the development environment
-   docker-compose up --build
+   # Build the Docker image
+   docker build -t eqtrak-dev .
+   
+   # Start the development environment with volume mapping
+   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 eqtrak-dev
    ```
 
 3. Access:
    - Application: http://localhost:8000
    - Admin Panel: http://localhost:8000/admin
+
+### Key Docker Features
+- **Volume Mapping**: Local code is mounted into the container, enabling real-time code editing
+- **Isolated Environment**: Consistent development environment across different machines
+- **Simplified Setup**: Single Dockerfile without the overhead of docker-compose
+- **Auto-reload**: Code changes are detected and the server reloads automatically
 
 ### Traditional Setup
 See [Architecture](Architecture.md#development-setup) for traditional setup instructions.
@@ -71,4 +79,4 @@ See [Architecture](Architecture.md#development-setup) for traditional setup inst
 - [Template Structure](Architecture.md#template-structure)
 - [Template Best Practices](templates.md#best-practices)
 - [Context Requirements](templates.md#context-requirements)
-- [Styling Guidelines](templates.md#styling) 
+- [Styling Guidelines](templates.md#styling)

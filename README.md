@@ -55,40 +55,77 @@ EqTrak is a comprehensive web application designed to help investors track, anal
 
 ## Development Setup
 
-### Prerequisites
-- Python 3.8+
-- pip (Python package manager)
-- Virtual environment tool (venv recommended)
+### Option 1: Using Docker (Recommended)
+1. **Prerequisites**
+   - Docker
 
-### Installation
-1. Clone the repository
+2. **Quick Start with Docker**
+   ```bash
+   # Clone the repository
+   git clone [repository-url]
+   cd EqTrak
+
+   # Build the Docker image
+   docker build -t eqtrak-dev .
+   
+   # Run with volume mapping to enable real-time development
+   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 eqtrak-dev
+   ```
+
+3. **Access the application**
+   - Visit `http://localhost:8000` to access the application
+   - Admin interface available at `http://localhost:8000/admin`
+
+4. **Common Docker Commands**
+   ```bash
+   # View running containers
+   docker ps
+   
+   # Execute commands in container
+   docker exec -it <container_id> python manage.py migrate
+   docker exec -it <container_id> python manage.py createsuperuser
+   
+   # View logs
+   docker logs <container_id>
+   
+   # Stop container
+   docker stop <container_id>
+   ```
+
+### Option 2: Traditional Setup
+1. **Prerequisites**
+   - Python 3.8+
+   - pip (Python package manager)
+   - Virtual environment tool (venv recommended)
+
+2. **Installation**
    ```bash
    git clone [repository-url]
    cd EqTrak
    ```
 
-2. Create and activate virtual environment
+3. **Create and activate virtual environment**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies
+4. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Setup database
+5. **Setup database**
    ```bash
    python manage.py migrate
    ```
 
-5. Create a superuser (optional)
+6. **Create a superuser (optional)**
    ```bash
    python manage.py createsuperuser
    ```
 
-6. Run development server
+7. **Run development server**
    ```bash
    python manage.py runserver
    ```
@@ -129,4 +166,4 @@ For support, please:
 3. Contact the development team
 
 ---
-*Note: This project is under active development. Features and documentation will be updated regularly.* 
+*Note: This project is under active development. Features and documentation will be updated regularly.*

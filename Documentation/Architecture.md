@@ -151,17 +151,8 @@ EqTrak/
 
 ## Docker Development
 
-### Container Structure
-```
-EqTrak (Docker)
-├── web                     # Main application container
-│   ├── Django app         # Mounted from host
-│   ├── Static files      # Persistent volume
-│   └── Media files       # Persistent volume
-│
-└── db                     # PostgreSQL database
-    └── Data              # Persistent volume
-```
+### Local Development Environment
+Docker is used primarily as a local development environment that provides consistent tooling and dependencies across developer machines, using a simple Dockerfile with volume mapping.
 
 ### Development Setup Files
 1. **Dockerfile**
@@ -169,24 +160,15 @@ EqTrak (Docker)
    - Development dependencies
    - Application setup
    - Entrypoint configuration
-
-2. **docker-compose.yml**
-   - Service definitions
-   - Volume mappings
-   - Environment variables
-   - Port mappings
-
-3. **docker-entrypoint.sh**
+2. **docker-entrypoint.sh**
    - Database migrations
    - Static file collection
    - Superuser creation
    - Application startup
 
 ### Quick Start Guide
-
 1. **Prerequisites**
    - Docker Desktop (Mac/Windows) or Docker Engine (Linux)
-   - Docker Compose
    - Git
 
 2. **Environment Setup**
@@ -195,46 +177,54 @@ EqTrak (Docker)
    git clone [repository-url]
    cd EqTrak
 
-   # Start development environment
-   docker-compose up --build
+   # Build the Docker image
+   docker build -t eqtrak-dev .
+   
+   # Run with volume mapping to enable real-time development
+   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 eqtrak-dev
    ```
 
 3. **Development Workflow**
+   - Local code is mounted into the container via volume mapping
    - Code changes are reflected immediately (hot-reload)
-   - Database persists between restarts
-   - Static/media files persist in volumes
-   - Access logs via `docker-compose logs`
+   - Access logs via `docker logs <container_id>`
 
 4. **Common Tasks**
    ```bash
+   # Get container ID
+   docker ps
+   
    # Create migrations
-   docker-compose exec web python manage.py makemigrations
+   docker exec <container_id> python manage.py makemigrations
 
    # Apply migrations
-   docker-compose exec web python manage.py migrate
+   docker exec <container_id> python manage.py migrate
 
    # Create superuser
-   docker-compose exec web python manage.py createsuperuser
+   docker exec -it <container_id> python manage.py createsuperuser
 
    # Collect static files
-   docker-compose exec web python manage.py collectstatic
+   docker exec <container_id> python manage.py collectstatic
    ```
 
 5. **Environment Variables**
-   - `DEBUG`: Set to True for development
-   - `SECRET_KEY`: Django secret key
-   - `ALLOWED_HOSTS`: Comma-separated list of allowed hosts
-   - Database credentials (see docker-compose.yml)
+   Pass environment variables directly in the docker run command:
+   ```bash
+   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 \
+     -e DEBUG=True \
+     -e SECRET_KEY=your-dev-secret-key \
+     -e ALLOWED_HOSTS=localhost,127.0.0.1 \
+     eqtrak-dev
+   ```
 
-6. **Accessing Services**
+6. **Accessing the Application**
    - Application: http://localhost:8000
    - Admin Panel: http://localhost:8000/admin
-   - Database: localhost:5432 (from host)
 
 ### Best Practices
-1. Don't commit sensitive information in docker-compose.yml
-2. Use .env file for sensitive variables
-3. Keep development and production Dockerfiles separate
-4. Regularly backup development database
-5. Use volume mounts for development
-6. Monitor container logs for issues 
+1. Don't expose sensitive information in Dockerfile or commands
+2. Use environment variables for configuration
+3. Use volume mounts for development to edit code without container rebuilds
+4. Consider setting up .env files for local development
+5. Monitor container logs for issues
+6. Restart the container after major dependency changes
