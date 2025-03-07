@@ -33,4 +33,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Command to run on container start
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["python", "EqTrak/manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "/workspace/EqTrak/manage.py", "runserver", "0.0.0.0:8000"]
