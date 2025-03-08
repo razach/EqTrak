@@ -9,6 +9,7 @@ from itertools import groupby
 from operator import attrgetter
 from metrics.views import get_position_metrics, get_portfolio_metrics
 from metrics.models import MetricType, MetricValue
+from market_data.services import MarketDataService
 
 # Create your views here.
 
@@ -155,14 +156,39 @@ def position_detail(request, portfolio_id, position_id):
     portfolio = get_object_or_404(Portfolio, portfolio_id=portfolio_id)
     position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     transactions = position.transaction_set.all().order_by('-date', '-created_at')
+    
+    # Sync market data with metrics
+    try:
+        MarketDataService.sync_price_with_metrics(position)
+    except Exception as e:
+        messages.warning(request, f"Could not update market data: {str(e)}")
+    
+    # Get position metrics (which now includes the updated market price)
     position_metrics = get_position_metrics(position)
     
-    return render(request, 'portfolio/position_detail.html', {
+    # Get the price staleness info
+    is_stale = False
+    try:
+        from datetime import date, timedelta
+        latest_price = MarketDataService.get_latest_price(position.security)
+        is_stale = latest_price.get('is_stale', False)
+        price_date = latest_price['date']
+        if date.fromisoformat(price_date) < date.today() - timedelta(days=3):
+            is_stale = True
+    except:
+        is_stale = True
+        price_date = None
+    
+    context = {
         'portfolio': portfolio,
         'position': position,
         'transactions': transactions,
-        'position_metrics': position_metrics
-    })
+        'position_metrics': position_metrics,
+        'is_stale': is_stale,
+        'price_date': price_date
+    }
+    
+    return render(request, 'portfolio/position_detail.html', context)
 
 @login_required
 def transaction_create(request, portfolio_id, position_id):

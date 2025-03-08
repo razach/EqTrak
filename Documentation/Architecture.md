@@ -41,6 +41,19 @@ EqTrak/
 │           ├── metric_type_form.html
 │           └── metric_value_form.html
 │
+├── market_data/           # Market data app
+│   ├── models.py         # Security, PriceData models
+│   ├── views.py          # Market data views
+│   ├── urls.py           # Market data URL patterns
+│   ├── providers/        # Data provider implementations
+│   │   ├── base.py      # Provider base class
+│   │   └── yahoo.py     # Yahoo Finance provider
+│   ├── tasks.py         # Async tasks for data fetching
+│   └── templates/
+│       └── market_data/  # Market data templates
+│           ├── security_list.html
+│           └── price_chart.html
+│
 ├── users/                # User management app
 │   ├── models.py        # User profile models
 │   ├── views.py         # Authentication views
@@ -65,6 +78,7 @@ EqTrak/
 - **Dependencies**: 
   - Metrics app for position metrics
   - Users app for authentication
+  - Market Data app for security prices
 - **Key Features**:
   - Portfolio CRUD operations
   - Position management
@@ -74,6 +88,7 @@ EqTrak/
 - **Primary Purpose**: Handles metric types and values
 - **Dependencies**:
   - Portfolio app for position, portfolio, and transaction data
+  - Market Data app for price-based metrics
 - **Key Features**:
   - Metric type definitions (system and user-defined)
   - Metric value tracking with support for:
@@ -86,6 +101,22 @@ EqTrak/
 - **Global Context**:
   - Provides metric types to all templates via context processor
   - Groups metrics by scope type (Position, Portfolio, Transaction)
+
+### Market Data App
+- **Primary Purpose**: Retrieves and manages security price data
+- **Dependencies**:
+  - None (other apps depend on it)
+- **Key Features**:
+  - Extensible provider architecture
+  - Yahoo Finance integration
+  - Historical price data retrieval
+  - Price caching system
+  - Security management
+  - Data refresh scheduling
+- **Provider System**:
+  - Base provider interface
+  - Provider-specific implementations
+  - Configuration-based provider selection
 
 ### Users App
 - **Primary Purpose**: User authentication and profiles
@@ -108,6 +139,14 @@ EqTrak/
 3. **Users → Portfolio**
    - Portfolios are associated with users
    - Authentication required for portfolio operations
+
+4. **Market Data → Portfolio**
+   - Provides security prices for positions
+   - Updates position values based on latest prices
+
+5. **Market Data → Metrics**
+   - Supplies price data for price-based metrics
+   - Enables performance calculations 
 
 ## Template Structure
 
@@ -137,6 +176,13 @@ EqTrak/
 ├── metrics/               # Metrics management
 │   ├── create/           # Create metric type
 │   └── <uuid>/          # Metric operations
+│
+├── market-data/           # Market data management
+│   ├── securities/       # Security management
+│   │   ├── create/      # Create security
+│   │   └── <uuid>/     # Security detail
+│   ├── refresh/         # Manual data refresh
+│   └── api/             # API endpoints for price data
 │
 └── accounts/             # User management
     ├── login/

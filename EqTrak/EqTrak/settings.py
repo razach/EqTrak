@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'portfolio',
     'users',
     'metrics',
+    'market_data',
 ]
 
 MIDDLEWARE = [
@@ -182,3 +183,10 @@ CORS_ALLOWED_ORIGINS = [
 LOGIN_REDIRECT_URL = '/portfolio/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
+
+# Market Data Provider configuration
+MARKET_DATA_PROVIDER = 'yahoo'  # Default data provider
+
+# Optional price data settings
+MARKET_DATA_REFRESH_INTERVAL = 24  # Hours between auto-refresh
+MARKET_DATA_PRICE_STALENESS = 3  # Days before prices considered stale

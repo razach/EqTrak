@@ -62,6 +62,17 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
 ### Traditional Setup
 See [Architecture](Architecture.md#development-setup) for traditional setup instructions.
 
+## Development Roadmap
+
+For a detailed list of upcoming tasks and planned features, see the [TODO document](TODO.md) which includes:
+
+- Market Data Integration tasks
+- UI Enhancements
+- Data Management improvements
+- Performance Optimization tasks
+
+We are actively working on integrating real-time market data functionality. Check the TODO document for specific implementation plans.
+
 ## Development Resources
 
 - [Test Users](test_users.md) (Development environment only)

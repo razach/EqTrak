@@ -65,6 +65,79 @@ This web app is designed to help users track their equity positions, analyze sto
   - User-defined input data stored in the database.
   - Calculation engine to process inputs and generate outputs.
 
+## Market Data Integration
+
+### Provider Architecture
+
+The Market Data app implements a provider pattern to allow for flexible data sourcing:
+
+1. **Base Provider Interface**
+   - Defined in `market_data/providers/base.py`
+   - Abstract methods for fetching securities and prices
+   - Standard response format regardless of source
+
+2. **Provider Implementations**
+   - Yahoo Finance (`market_data/providers/yahoo.py`)
+   - Future providers can be added with minimal changes
+
+3. **Provider Configuration**
+   - Provider selection via settings
+   - Fallback mechanisms for data reliability
+
+```python
+# Provider selection example
+MARKET_DATA_PROVIDER = 'yahoo'  # Can be changed to other providers as needed
+```
+
+### Data Flow Between Apps
+
+1. **Market Data → Portfolio Integration**
+   - Securities from Market Data app are referenced by Position model
+   - Position values are calculated using latest prices
+   - Positions display current market values based on PriceData
+
+2. **Market Data → Metrics Integration**
+   - Price-dependent metrics use latest security prices
+   - Performance calculations reference historical price data
+   - Market value change metrics use price history
+
+3. **Data Refresh Workflow**
+   - Scheduled tasks update price data periodically
+   - Manual refresh triggers are available via admin interface
+   - Price updates trigger position value recalculations
+
+### Caching Strategy
+
+To minimize external API calls:
+
+1. **Historical Data**
+   - Full history fetched once per security
+   - Daily incremental updates for active securities
+
+2. **Recency Rules**
+   - Market prices considered stale after configurable time
+   - Different freshness requirements for different use cases
+
+3. **Cache Invalidation**
+   - Time-based expiry for current prices
+   - Manual refresh options for immediate updates
+
+### Error Handling
+
+Market data failures are managed through:
+
+1. **Retries and Fallbacks**
+   - Failed API calls retried with exponential backoff
+   - Multiple provider support for critical data
+
+2. **Staleness Indicators**
+   - UI indicates when prices are outdated
+   - System alerts for persistent data failures
+
+3. **Degraded Operation Mode**
+   - System continues to function with outdated prices
+   - Clear indicators when operating with stale data
+
 ## Related Documentation
 - [Data Model](Data%20Model.md) - Database schema and relationships
 - [Templates](templates.md) - Template structure and components

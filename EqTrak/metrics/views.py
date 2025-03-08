@@ -536,3 +536,25 @@ def get_portfolio_metrics(portfolio):
             portfolio_metrics.append(latest_metric)
     
     return portfolio_metrics
+
+def get_specific_metric(position, metric_name):
+    """
+    Get a specific metric value for a position
+    
+    Args:
+        position: Position object
+        metric_name: Name of the metric to fetch
+        
+    Returns:
+        MetricValue object or None if not found
+    """
+    from metrics.models import MetricType, MetricValue
+    
+    try:
+        metric_type = MetricType.objects.get(name=metric_name)
+        return MetricValue.objects.filter(
+            position=position,
+            metric_type=metric_type
+        ).order_by('-date').first()
+    except Exception:
+        return None

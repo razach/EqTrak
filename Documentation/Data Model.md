@@ -45,7 +45,7 @@
 | is_active     | Boolean   | Yes      | Position status           |
 | created_at    | Timestamp | Yes      | Position creation time    |
 | updated_at    | Timestamp | Yes      | Last update time          |
-
+| security      | ForeignKey| Yes      | Reference to Security     |
 
 ### **Portfolio Snapshot Table**
 
@@ -150,6 +150,42 @@ Tags allow users to organize metrics into custom categories (e.g., "Fundamental"
 |date|Date|Yes|Date the analytic is relevant|
 |calculated_at|Timestamp|Yes|Time when the analytic was calculated|
 
+## Market Data Models
+
+### Security
+
+Represents a tradable security in the market (stocks, ETFs, mutual funds, etc.).
+
+| Field         | Type          | Description                              |
+|---------------|---------------|------------------------------------------|
+| id            | UUID          | Primary key                              |
+| symbol        | CharField     | Ticker symbol (e.g., AAPL, MSFT)         |
+| name          | CharField     | Full name of the security                |
+| security_type | CharField     | Type (stock, ETF, mutual fund, etc.)     |
+| exchange      | CharField     | Exchange where security is traded        |
+| currency      | CharField     | Trading currency                         |
+| created_at    | DateTimeField | Creation timestamp                       |
+| updated_at    | DateTimeField | Last update timestamp                    |
+| active        | BooleanField  | Whether security is active in the system |
+
+### PriceData
+
+Stores historical price data for securities.
+
+| Field       | Type           | Description                     |
+|-------------|----------------|---------------------------------|
+| id          | UUID           | Primary key                     |
+| security    | ForeignKey     | Reference to Security model     |
+| date        | DateField      | Date of the price data          |
+| open        | DecimalField   | Opening price                   |
+| high        | DecimalField   | Highest price of the day        |
+| low         | DecimalField   | Lowest price of the day         |
+| close       | DecimalField   | Closing price                   |
+| adj_close   | DecimalField   | Adjusted closing price          |
+| volume      | BigIntegerField| Trading volume                  |
+| source      | CharField      | Data provider source            |
+| created_at  | DateTimeField  | Timestamp of data creation      |
+| updated_at  | DateTimeField  | Timestamp of last data update   |
 
 ## Key Relationships
 
@@ -160,6 +196,58 @@ Tags allow users to organize metrics into custom categories (e.g., "Fundamental"
 5. Portfolio → Portfolio Snapshot (1:M)
 6. Position → Metric Values (1:M)
 7. Metric Type → Metric Values (1:M)
+
+## Inter-Model Relationships
+
+### Position → Security
+
+Positions in the portfolio app reference securities from the market_data app by ticker:
+
+```python
+# In portfolio/models.py
+class Position(models.Model):
+    # ...existing fields...
+    ticker = models.CharField(max_length=10)  # Used to reference securities
+    # Note: No direct foreign key to Security
+```
+
+This relationship:
+- Links portfolio positions to market securities via ticker symbol
+- Allows for flexibility in referencing securities that might not exist in the database yet
+- Enables the market_data service to look up or create securities on demand
+
+The actual connection is made through the MarketDataService:
+
+```python
+# In market_data/services.py
+def sync_price_with_metrics(position):
+    # Get security by ticker since Position doesn't have a direct security field
+    security = MarketDataService.get_or_create_security(position.ticker)
+    # ...get price data and update metrics...
+```
+
+### MetricValue → Security (Indirect)
+
+Our implementation stores market prices as metrics rather than direct attributes:
+
+```python
+# Market Price stored as a metric value
+metric_value = MetricValue.objects.update_or_create(
+    position=position,
+    metric_type=market_price_metric,
+    date=price_date,
+    defaults={
+        'value': latest_price['price'],
+        'source': latest_price['source'],
+        'is_forecast': False
+    }
+)
+```
+
+This design:
+- Maintains consistent treatment of all financial data as metrics
+- Preserves price history automatically through the metrics system
+- Enables the metrics computation system to use latest market data
 
 ## Data Access Patterns
 
