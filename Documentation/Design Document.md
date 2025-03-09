@@ -83,11 +83,31 @@ The Market Data app implements a provider pattern to allow for flexible data sou
 3. **Provider Configuration**
    - Provider selection via settings
    - Fallback mechanisms for data reliability
+   - Toggle system for enabling/disabling market data updates
 
 ```python
 # Provider selection example
 MARKET_DATA_PROVIDER = 'yahoo'  # Can be changed to other providers as needed
 ```
+
+### Market Data Updates Control
+
+The application provides a user-friendly toggle to enable or disable market data updates system-wide:
+
+1. **Toggle Interface**
+   - Available on the Portfolios homepage
+   - Simple switch UI for immediate control
+   - Visual feedback on current status
+
+2. **Implementation Details**
+   - Singleton settings model (`MarketDataSettings`) stores toggle state
+   - Centralized checking through `is_updates_enabled()` method
+   - Graceful degradation when updates are disabled (shows cached data)
+
+3. **API Call Prevention**
+   - When disabled, prevents external API calls from all app components
+   - Management commands respect the toggle (with override option)
+   - Service methods check toggle state before external requests
 
 ### Data Flow Between Apps
 

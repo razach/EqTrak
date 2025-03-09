@@ -3,9 +3,9 @@
     <div class="card-header bg-white py-3">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0 fw-bold">Transactions</h5>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+            <a href="{% url 'portfolio:transaction_create' portfolio.portfolio_id position.position_id %}" class="btn btn-primary">
                 <i class="bi bi-plus"></i> Add Transaction
-            </button>
+            </a>
         </div>
     </div>
     <div class="card-body">

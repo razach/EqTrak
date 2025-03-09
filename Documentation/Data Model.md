@@ -152,40 +152,44 @@ Tags allow users to organize metrics into custom categories (e.g., "Fundamental"
 
 ## Market Data Models
 
-### Security
+### **Security Table**
 
-Represents a tradable security in the market (stocks, ETFs, mutual funds, etc.).
+| Field          | Type       | Required | Description                           |
+|----------------|------------|----------|---------------------------------------|
+| id             | UUID       | Yes      | Primary identifier                    |
+| symbol         | String     | Yes      | Ticker symbol (e.g., AAPL)            |
+| name           | String     | Yes      | Company/security name                 |
+| security_type  | Enum       | Yes      | STOCK, ETF, MUTUAL_FUND, etc.         |
+| exchange       | String     | No       | Exchange where traded                 |
+| currency       | String     | Yes      | Trading currency (e.g., USD)          |
+| created_at     | Timestamp  | Yes      | Record creation time                  |
+| updated_at     | Timestamp  | Yes      | Last update time                      |
+| active         | Boolean    | Yes      | Whether security is active            |
 
-| Field         | Type          | Description                              |
-|---------------|---------------|------------------------------------------|
-| id            | UUID          | Primary key                              |
-| symbol        | CharField     | Ticker symbol (e.g., AAPL, MSFT)         |
-| name          | CharField     | Full name of the security                |
-| security_type | CharField     | Type (stock, ETF, mutual fund, etc.)     |
-| exchange      | CharField     | Exchange where security is traded        |
-| currency      | CharField     | Trading currency                         |
-| created_at    | DateTimeField | Creation timestamp                       |
-| updated_at    | DateTimeField | Last update timestamp                    |
-| active        | BooleanField  | Whether security is active in the system |
+### **PriceData Table**
 
-### PriceData
+| Field          | Type       | Required | Description                           |
+|----------------|------------|----------|---------------------------------------|
+| id             | UUID       | Yes      | Primary identifier                    |
+| security       | ForeignKey | Yes      | Reference to Security                 |
+| date           | Date       | Yes      | Date of the price data                |
+| open           | Decimal    | Yes      | Opening price                         |
+| high           | Decimal    | Yes      | Highest price of day                  |
+| low            | Decimal    | Yes      | Lowest price of day                   |
+| close          | Decimal    | Yes      | Closing price                         |
+| adj_close      | Decimal    | Yes      | Adjusted closing price                |
+| volume         | Integer    | Yes      | Trading volume                        |
+| source         | String     | Yes      | Data source (e.g., "yahoo")           |
+| created_at     | Timestamp  | Yes      | Record creation time                  |
+| updated_at     | Timestamp  | Yes      | Last update time                      |
 
-Stores historical price data for securities.
+### **MarketDataSettings Table**
 
-| Field       | Type           | Description                     |
-|-------------|----------------|---------------------------------|
-| id          | UUID           | Primary key                     |
-| security    | ForeignKey     | Reference to Security model     |
-| date        | DateField      | Date of the price data          |
-| open        | DecimalField   | Opening price                   |
-| high        | DecimalField   | Highest price of the day        |
-| low         | DecimalField   | Lowest price of the day         |
-| close       | DecimalField   | Closing price                   |
-| adj_close   | DecimalField   | Adjusted closing price          |
-| volume      | BigIntegerField| Trading volume                  |
-| source      | CharField      | Data provider source            |
-| created_at  | DateTimeField  | Timestamp of data creation      |
-| updated_at  | DateTimeField  | Timestamp of last data update   |
+| Field            | Type       | Required | Description                           |
+|------------------|------------|----------|---------------------------------------|
+| id               | Integer    | Yes      | Primary key (always 1 - singleton)    |
+| updates_enabled  | Boolean    | Yes      | Whether market data updates are enabled|
+| last_modified    | Timestamp  | Yes      | Last modification time                |
 
 ## Key Relationships
 

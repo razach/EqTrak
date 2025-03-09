@@ -15,7 +15,9 @@ This document outlines the remaining tasks needed to fully integrate the market_
 - [ ] **Portfolio Detail Page**: Update to show current market values for all positions
 - [ ] **Portfolio Summary Metrics**: Add total market value and unrealized gain/loss metrics
 - [ ] **Bulk Update**: Add functionality to update all positions' market data in a portfolio at once
-- [ ] **Data Refresh Buttons**: Add UI controls to manually refresh market data
+- [x] **Market Data Toggle**: Add UI controls to enable/disable market data updates system-wide
+- [ ] **Cash Balance Function**: Implement cash balance function at the portfolio level based on sale transactions
+- [ ] **User Defined Metrics**: Implement functionality for users to define and track custom metrics
 
 ### Position Detail View
 - [ ] **Price History Chart**: Add price history chart to position detail page
@@ -37,6 +39,7 @@ This document outlines the remaining tasks needed to fully integrate the market_
 - [ ] **Scheduled Updates**: Configure recurring tasks to update price data
 - [ ] **Data Health Monitoring**: Add admin views to monitor data freshness
 - [ ] **Price Data Cleanup**: Implement data retention policies
+- [x] **Data Update Control**: Implement toggle system to enable/disable external API calls
 
 ### User Experience Improvements
 - [ ] **Loading States**: Add loading indicators during market data fetching

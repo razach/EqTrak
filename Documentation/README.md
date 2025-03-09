@@ -30,6 +30,12 @@ Welcome to the EqTrak documentation. This documentation provides comprehensive i
    - Usage guidelines
    - Styling conventions
 
+5. [Market Data Controls](Market%20Data%20Controls.md)
+   - Market data toggle feature
+   - Usage and functionality
+   - Technical details
+   - Admin controls
+
 ## Development Setup
 
 ### Using Docker for Local Development
