@@ -31,4 +31,5 @@ urlpatterns = [
     path('signup/', SignUpView.as_view(), name='signup'),
     path('metrics/', include('metrics.urls')),
     path('users/', include('users.urls')),  # Include users app URLs
+    path('user-metrics/', include('user_metrics.urls', namespace='user_metrics')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

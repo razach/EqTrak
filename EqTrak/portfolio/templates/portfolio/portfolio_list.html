@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load portfolio_filters %}
+{% load user_metrics_tags %}
 
 {% block title %}My Portfolios - EqTrak{% endblock %}
 
@@ -22,54 +23,15 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {% for portfolio in portfolios %}
                 <div class="col">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ portfolio.name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ portfolio.currency }}</h6>
-                            {% if portfolio.description %}
-                                <p class="card-text">{{ portfolio.description }}</p>
-                            {% endif %}
-                            
-                            <!-- Portfolio Metrics -->
-                            <div class="mt-3">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <tbody>
-                                            {% for metric in portfolio_metrics %}
-                                                <tr>
-                                                    <td class="text-muted">{{ metric.name }}</td>
-                                                    <td class="text-end">
-                                                        {% with value=portfolio|portfolio_metric_value:metric.name %}
-                                                            {% if value is not None %}
-                                                                {% if metric.data_type == 'CURRENCY' %}
-                                                                    {{ portfolio.currency }} {{ value|floatformat:2 }}
-                                                                {% elif metric.data_type == 'PERCENTAGE' %}
-                                                                    <span class="{% if value >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                                        {{ value|floatformat:2 }}%
-                                                                    </span>
-                                                                {% else %}
-                                                                    {{ value|floatformat:2 }}
-                                                                {% endif %}
-                                                            {% else %}
-                                                                <span class="text-muted">—</span>
-                                                            {% endif %}
-                                                        {% endwith %}
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-3">
-                                <a href="{% url 'portfolio:portfolio_detail' portfolio.portfolio_id %}" class="btn btn-primary btn-sm">View Details</a>
-                            </div>
-                        </div>
-                        <div class="card-footer text-muted">
-                            Created: {{ portfolio.created_at|date:"M d, Y" }}
-                        </div>
-                    </div>
+                    {% comment %}
+                      Include the portfolio card component
+                      
+                      Note: card_metrics contains ONLY system metrics (CURRENCY and PERCENTAGE)
+                      filtered in the view for a clean, consistent card display.
+                      User-defined metrics are intentionally excluded here and shown
+                      only in the metrics section below.
+                    {% endcomment %}
+                    {% include 'portfolio/components/portfolio_card.html' with portfolio=portfolio card_metrics=card_metrics %}
                 </div>
             {% endfor %}
         </div>
@@ -80,5 +42,23 @@
     {% endif %}
 </div>
 
-{% include 'metrics/components/metric_types_list.html' %}
+<!-- Metrics Section - Contains ALL metrics (both system and user-defined) -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col">
+            <h2>Metrics</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'user_metrics:list' %}" class="btn btn-primary">
+                <i class="bi bi-list"></i> Manage Custom Metrics
+            </a>
+        </div>
+    </div>
+    
+    {% comment %}
+    The metrics_types_list.html component displays all metrics from the context processor
+    including both system metrics and user-defined metrics
+    {% endcomment %}
+    {% include 'metrics/components/metric_types_list.html' %}
+</div>
 {% endblock %} 

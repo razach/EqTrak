@@ -1,0 +1,63 @@
+{% load portfolio_filters %}
+
+{% comment %}
+  Portfolio Card Component
+  
+  Displays a portfolio card with key metrics.
+  
+  Parameters:
+  - portfolio: The portfolio object to display
+  - card_metrics: List of system metrics to show (filtered in the view)
+  
+  Note: This component intentionally only shows system metrics (CURRENCY and PERCENTAGE)
+  for a clean, consistent card view. User-defined metrics are shown in the metrics section.
+{% endcomment %}
+
+<div class="card h-100">
+    <div class="card-body">
+        <h5 class="card-title">{{ portfolio.name }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ portfolio.currency }}</h6>
+        {% if portfolio.description %}
+            <p class="card-text">{{ portfolio.description }}</p>
+        {% endif %}
+        
+        <!-- Portfolio System Metrics Only -->
+        <div class="mt-3">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <tbody>
+                        {% for metric in card_metrics %}
+                            <tr>
+                                <td class="text-muted">{{ metric.name }}</td>
+                                <td class="text-end">
+                                    {% with value=portfolio|portfolio_metric_value:metric.name %}
+                                        {% if value is not None %}
+                                            {% if metric.data_type == 'CURRENCY' %}
+                                                {{ portfolio.currency }} {{ value|floatformat:2 }}
+                                            {% elif metric.data_type == 'PERCENTAGE' %}
+                                                <span class="{% if value >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                    {{ value|floatformat:2 }}%
+                                                </span>
+                                            {% else %}
+                                                {{ value|floatformat:2 }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <a href="{% url 'portfolio:portfolio_detail' portfolio.portfolio_id %}" class="btn btn-primary btn-sm">View Details</a>
+        </div>
+    </div>
+    <div class="card-footer text-muted">
+        Created: {{ portfolio.created_at|date:"M d, Y" }}
+    </div>
+</div> 

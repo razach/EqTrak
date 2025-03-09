@@ -12,22 +12,28 @@ from metrics.views import get_position_metrics, get_portfolio_metrics
 from metrics.models import MetricType, MetricValue
 from market_data.services import MarketDataService
 from market_data.models import MarketDataSettings
+from user_metrics.models import UserDefinedMetric
 
 # Create your views here.
 
 @login_required
 def portfolio_list(request):
     portfolios = Portfolio.objects.filter(user=request.user, is_active=True)
-    # Get system metrics for portfolios
-    portfolio_metrics = MetricType.objects.filter(
+    
+    # Get system metrics for portfolio card display only
+    # We intentionally filter to ONLY system metrics (no user-defined metrics)
+    # and only those with CURRENCY or PERCENTAGE data types.
+    # This provides a clean, consistent display in the portfolio cards.
+    # User-defined metrics are shown in the metrics section below the cards.
+    card_metrics = MetricType.objects.filter(
         scope_type='PORTFOLIO',
         is_system=True,
-        data_type__in=['CURRENCY', 'PERCENTAGE']  # Only show currency and percentage metrics
+        data_type__in=['CURRENCY', 'PERCENTAGE']
     ).exclude(data_type='MEMO').order_by('computation_order', 'name')
     
     return render(request, 'portfolio/portfolio_list.html', {
         'portfolios': portfolios,
-        'portfolio_metrics': portfolio_metrics,
+        'card_metrics': card_metrics,  # Only used for the portfolio cards
     })
 
 @login_required
