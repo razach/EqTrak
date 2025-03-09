@@ -85,6 +85,10 @@ class MarketDataSettings(models.Model):
     updates_enabled = models.BooleanField(default=True, help_text="Enable or disable automatic market data updates")
     last_modified = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        verbose_name = _('Market Data Settings')
+        verbose_name_plural = _('Market Data Settings')
+    
     @classmethod
     def get_instance(cls):
         """Get or create the singleton settings instance"""

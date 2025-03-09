@@ -25,13 +25,9 @@ def portfolio_list(request):
         data_type__in=['CURRENCY', 'PERCENTAGE']  # Only show currency and percentage metrics
     ).exclude(data_type='MEMO').order_by('computation_order', 'name')
     
-    # Get market data update settings
-    market_data_updates_enabled = MarketDataSettings.is_updates_enabled()
-    
     return render(request, 'portfolio/portfolio_list.html', {
         'portfolios': portfolios,
         'portfolio_metrics': portfolio_metrics,
-        'market_data_updates_enabled': market_data_updates_enabled
     })
 
 @login_required
@@ -69,11 +65,15 @@ def portfolio_detail(request, portfolio_id):
     portfolio_metrics = get_portfolio_metrics(portfolio)  # Get portfolio metrics
     position_metrics = Position.get_display_metrics()  # Get position system metrics
     
+    # Check if market data updates are enabled for this user
+    market_data_updates_enabled = MarketDataService.is_updates_enabled(user=request.user)
+    
     return render(request, 'portfolio/portfolio_detail.html', {
         'portfolio': portfolio,
         'positions': positions,
         'portfolio_metrics': portfolio_metrics,
-        'position_metrics': position_metrics
+        'position_metrics': position_metrics,
+        'market_data_enabled': market_data_updates_enabled
     })
 
 @login_required
@@ -163,26 +163,32 @@ def position_detail(request, portfolio_id, position_id):
     position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     transactions = position.transaction_set.all().order_by('-date', '-created_at')
     
-    # Check if market data updates are enabled
-    market_data_updates_enabled = MarketDataSettings.is_updates_enabled()
+    # Check if market data updates are enabled for this user
+    market_data_updates_enabled = MarketDataService.is_updates_enabled(user=request.user)
     
     # Only sync market data if updates are enabled
     if market_data_updates_enabled:
         try:
-            MarketDataService.sync_price_with_metrics(position)
+            MarketDataService.sync_price_with_metrics(position, user=request.user)
         except Exception as e:
             messages.warning(request, f"Could not update market data: {str(e)}")
     else:
-        messages.info(request, "Market data updates are currently disabled.")
+        if not MarketDataSettings.is_updates_enabled():
+            messages.info(request, "Market data updates are currently disabled by the administrator.")
+        else:
+            messages.info(request, "You have disabled market data updates in your settings.")
     
-    # Get position metrics (which now includes the updated market price)
+    # Get position metrics (which now includes the updated market price if enabled)
     position_metrics = get_position_metrics(position)
     
     # Get the price staleness info
     is_stale = False
     try:
-        latest_price = MarketDataService.get_latest_price(position.security)
-        is_stale = latest_price.get('is_stale', False)
+        if market_data_updates_enabled:
+            latest_price = MarketDataService.get_latest_price(position.security, user=request.user)
+            is_stale = latest_price.get('is_stale', False)
+        else:
+            is_stale = True
     except Exception:
         is_stale = True
     
@@ -191,7 +197,8 @@ def position_detail(request, portfolio_id, position_id):
         'position': position,
         'transactions': transactions,
         'position_metrics': position_metrics,
-        'is_stale': is_stale
+        'is_stale': is_stale,
+        'market_data_enabled': market_data_updates_enabled
     }
     
     return render(request, 'portfolio/position_detail.html', context)
@@ -257,6 +264,14 @@ def transaction_edit(request, portfolio_id, position_id, transaction_id):
 
 @login_required
 def toggle_market_data_updates(request):
+    """
+    Admin-only view to toggle system-wide market data updates.
+    Regular users manage their own settings via the user settings page.
+    """
+    if not request.user.is_staff:
+        messages.error(request, "You don't have permission to change system-wide settings.")
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+        
     if request.method == 'POST':
         enabled = request.POST.get('enabled') == 'true'
         MarketDataSettings.set_updates_enabled(enabled)
@@ -267,6 +282,6 @@ def toggle_market_data_updates(request):
             # Iterating through messages marks them as read
             pass
             
-        messages.success(request, f"Market data updates {'enabled' if enabled else 'disabled'} successfully!")
+        messages.success(request, f"System-wide market data updates {'enabled' if enabled else 'disabled'} successfully!")
         return JsonResponse({'success': True, 'enabled': enabled})
     return JsonResponse({'success': False}, status=400)
