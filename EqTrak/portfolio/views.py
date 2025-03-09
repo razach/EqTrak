@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
+from django.http import JsonResponse
 from .models import Portfolio, Position, Transaction
 from .forms import PortfolioForm, PositionForm, TransactionForm
 import datetime
@@ -10,6 +11,7 @@ from operator import attrgetter
 from metrics.views import get_position_metrics, get_portfolio_metrics
 from metrics.models import MetricType, MetricValue
 from market_data.services import MarketDataService
+from market_data.models import MarketDataSettings
 
 # Create your views here.
 
@@ -23,9 +25,13 @@ def portfolio_list(request):
         data_type__in=['CURRENCY', 'PERCENTAGE']  # Only show currency and percentage metrics
     ).exclude(data_type='MEMO').order_by('computation_order', 'name')
     
+    # Get market data update settings
+    market_data_updates_enabled = MarketDataSettings.is_updates_enabled()
+    
     return render(request, 'portfolio/portfolio_list.html', {
         'portfolios': portfolios,
-        'portfolio_metrics': portfolio_metrics
+        'portfolio_metrics': portfolio_metrics,
+        'market_data_updates_enabled': market_data_updates_enabled
     })
 
 @login_required
@@ -157,11 +163,17 @@ def position_detail(request, portfolio_id, position_id):
     position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     transactions = position.transaction_set.all().order_by('-date', '-created_at')
     
-    # Sync market data with metrics
-    try:
-        MarketDataService.sync_price_with_metrics(position)
-    except Exception as e:
-        messages.warning(request, f"Could not update market data: {str(e)}")
+    # Check if market data updates are enabled
+    market_data_updates_enabled = MarketDataSettings.is_updates_enabled()
+    
+    # Only sync market data if updates are enabled
+    if market_data_updates_enabled:
+        try:
+            MarketDataService.sync_price_with_metrics(position)
+        except Exception as e:
+            messages.warning(request, f"Could not update market data: {str(e)}")
+    else:
+        messages.info(request, "Market data updates are currently disabled.")
     
     # Get position metrics (which now includes the updated market price)
     position_metrics = get_position_metrics(position)
@@ -169,23 +181,17 @@ def position_detail(request, portfolio_id, position_id):
     # Get the price staleness info
     is_stale = False
     try:
-        from datetime import date, timedelta
         latest_price = MarketDataService.get_latest_price(position.security)
         is_stale = latest_price.get('is_stale', False)
-        price_date = latest_price['date']
-        if date.fromisoformat(price_date) < date.today() - timedelta(days=3):
-            is_stale = True
-    except:
+    except Exception:
         is_stale = True
-        price_date = None
     
     context = {
         'portfolio': portfolio,
         'position': position,
         'transactions': transactions,
         'position_metrics': position_metrics,
-        'is_stale': is_stale,
-        'price_date': price_date
+        'is_stale': is_stale
     }
     
     return render(request, 'portfolio/position_detail.html', context)
@@ -248,3 +254,19 @@ def transaction_edit(request, portfolio_id, position_id, transaction_id):
         'title': f'Edit {transaction.get_transaction_type_display()} Transaction',
         'submit_text': 'Update'
     })
+
+@login_required
+def toggle_market_data_updates(request):
+    if request.method == 'POST':
+        enabled = request.POST.get('enabled') == 'true'
+        MarketDataSettings.set_updates_enabled(enabled)
+        
+        # Clear existing messages to prevent multiple banners
+        storage = messages.get_messages(request)
+        for _ in storage:
+            # Iterating through messages marks them as read
+            pass
+            
+        messages.success(request, f"Market data updates {'enabled' if enabled else 'disabled'} successfully!")
+        return JsonResponse({'success': True, 'enabled': enabled})
+    return JsonResponse({'success': False}, status=400)

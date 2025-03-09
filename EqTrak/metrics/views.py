@@ -7,6 +7,7 @@ from .forms import MetricTypeForm, MetricValueForm, MetricUpdateForm
 import datetime
 from itertools import groupby
 from operator import attrgetter
+from django.http import Http404
 
 @login_required
 def metric_type_create(request):
@@ -112,40 +113,62 @@ def metric_value_create(request, portfolio_id, position_id=None):
     metric_type_id = request.GET.get('metric_type')
     if not metric_type_id:
         messages.error(request, 'No metric type specified.')
-        if position:
+        if position and position_id:  # Ensure position_id is not None
             return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
         else:
             return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
     
     metric_type = get_object_or_404(MetricType, metric_id=metric_type_id)
     
+    # Validate that the metric type matches the expected scope
+    if metric_type.scope_type == 'PORTFOLIO' and position_id:
+        messages.warning(request, f'{metric_type.name} is a portfolio-level metric and should be added at the portfolio level.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+    elif metric_type.scope_type == 'POSITION' and not position_id:
+        messages.warning(request, f'{metric_type.name} is a position-level metric and requires a position.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+    elif metric_type.scope_type == 'TRANSACTION' and not position_id:
+        messages.warning(request, f'{metric_type.name} is a transaction-level metric and requires a position and transaction.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+    
     # For transaction metrics, get the transaction
     transaction = None
     if metric_type.scope_type == 'TRANSACTION':
-        if not position:
-            messages.error(request, 'Cannot add transaction metrics without a position.')
-            return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
-        
         transaction_id = request.GET.get('transaction_id')
         if not transaction_id:
             messages.error(request, 'No transaction specified for transaction metric.')
-            return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+            if position_id:  # Ensure position_id is not None
+                return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
+            else:
+                return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
         transaction = get_object_or_404(Transaction, transaction_id=transaction_id, position=position)
     
     if request.method == 'POST':
         form = MetricValueForm(request.POST, metric_type=metric_type)
         if form.is_valid():
             metric_value = form.save(commit=False)
-            # Set the appropriate object based on scope type
+            # Set the appropriate object based on scope type - only set one target
             if metric_type.scope_type == 'TRANSACTION':
+                if not transaction:
+                    messages.error(request, 'Cannot add transaction metrics without a transaction.')
+                    return redirect('metrics:position_metrics', portfolio_id=portfolio_id, position_id=position_id)
                 metric_value.transaction = transaction
+                # Clear any other target fields
+                metric_value.position = None
+                metric_value.portfolio = None
             elif metric_type.scope_type == 'POSITION':
                 if not position:
                     messages.error(request, 'Cannot add position metrics without a position.')
                     return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
                 metric_value.position = position
+                # Clear any other target fields
+                metric_value.portfolio = None
+                metric_value.transaction = None
             else:  # PORTFOLIO scope
                 metric_value.portfolio = portfolio
+                # Clear any other target fields
+                metric_value.position = None
+                metric_value.transaction = None
             
             metric_value.metric_type = metric_type
             metric_value.source = 'USER'
@@ -154,17 +177,22 @@ def metric_value_create(request, portfolio_id, position_id=None):
             
             # Redirect based on scope type
             if metric_type.scope_type == 'TRANSACTION':
-                return redirect('metrics:transaction_metrics', 
-                              portfolio_id=portfolio_id, 
-                              position_id=position_id,
-                              transaction_id=transaction.transaction_id)
+                if position_id:  # Ensure position_id is not None
+                    return redirect('metrics:transaction_metrics', 
+                                  portfolio_id=portfolio_id, 
+                                  position_id=position_id,
+                                  transaction_id=transaction.transaction_id)
+                else:
+                    return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
             elif metric_type.scope_type == 'POSITION':
-                return redirect('metrics:position_metrics', 
-                              portfolio_id=portfolio_id, 
-                              position_id=position_id)
+                if position and position_id:  # Ensure position_id is not None
+                    return redirect('metrics:position_metrics', 
+                                  portfolio_id=portfolio_id, 
+                                  position_id=position_id)
+                else:
+                    return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
             else:  # PORTFOLIO scope
-                return redirect('metrics:portfolio_metrics', 
-                              portfolio_id=portfolio_id)
+                return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
     else:
         form = MetricValueForm(
             metric_type=metric_type,
@@ -194,32 +222,75 @@ def metric_value_edit(request, portfolio_id, position_id=None, value_id=None):
         position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
     
     # Get the metric value based on scope
+    transaction = None
     if position:
-        metric_value = get_object_or_404(MetricValue, value_id=value_id, position=position)
+        # Try to get the metric value for position or transaction scope
+        try:
+            metric_value = get_object_or_404(MetricValue, value_id=value_id, position=position)
+        except:
+            # Maybe it's a transaction-level metric
+            metric_value = get_object_or_404(MetricValue, value_id=value_id)
+            if metric_value.transaction and metric_value.transaction.position == position:
+                transaction = metric_value.transaction
+            else:
+                # Not found or not related to this position
+                raise Http404("Metric value not found")
     else:
+        # Looking for a portfolio-level metric
         metric_value = get_object_or_404(MetricValue, value_id=value_id, portfolio=portfolio)
+    
+    # Validate that the metric type matches the expected scope
+    if metric_value.metric_type.scope_type == 'PORTFOLIO' and position_id:
+        messages.warning(request, f'{metric_value.metric_type.name} is a portfolio-level metric and should be edited at the portfolio level.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+    elif metric_value.metric_type.scope_type == 'POSITION' and not position_id:
+        messages.warning(request, f'{metric_value.metric_type.name} is a position-level metric and requires a position.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
+    elif metric_value.metric_type.scope_type == 'TRANSACTION' and not position_id:
+        messages.warning(request, f'{metric_value.metric_type.name} is a transaction-level metric and requires a position and transaction.')
+        return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
     
     if request.method == 'POST':
         form = MetricValueForm(request.POST, instance=metric_value, metric_type=metric_value.metric_type)
         if form.is_valid():
             metric_value = form.save(commit=False)
             metric_value.source = 'USER'  # Update source on edit
+            
+            # Ensure proper hierarchy is maintained
+            if metric_value.metric_type.scope_type == 'PORTFOLIO':
+                metric_value.portfolio = portfolio
+                metric_value.position = None
+                metric_value.transaction = None
+            elif metric_value.metric_type.scope_type == 'POSITION':
+                metric_value.position = position
+                metric_value.portfolio = None
+                metric_value.transaction = None
+            elif metric_value.metric_type.scope_type == 'TRANSACTION':
+                # Make sure the transaction is still set from when we loaded the object
+                # Don't set or clear position/portfolio - should be None already from model validation
+                pass
+            
             metric_value.save()
             messages.success(request, f'{metric_value.metric_type.name} value updated successfully!')
             
             # Redirect based on scope type
             if metric_value.metric_type.scope_type == 'TRANSACTION':
-                return redirect('metrics:transaction_metrics', 
-                              portfolio_id=portfolio_id, 
-                              position_id=position_id,
-                              transaction_id=metric_value.transaction.transaction_id)
+                if position_id:  # Ensure position_id is not None
+                    return redirect('metrics:transaction_metrics', 
+                                  portfolio_id=portfolio_id, 
+                                  position_id=position_id,
+                                  transaction_id=metric_value.transaction.transaction_id)
+                else:
+                    return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
             elif metric_value.metric_type.scope_type == 'POSITION':
-                return redirect('metrics:position_metrics', 
-                              portfolio_id=portfolio_id, 
-                              position_id=position_id)
+                if position_id:  # Ensure position_id is not None
+                    return redirect('metrics:position_metrics', 
+                                  portfolio_id=portfolio_id, 
+                                  position_id=position_id)
+                else:
+                    return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
             else:  # PORTFOLIO scope
-                return redirect('metrics:portfolio_metrics', 
-                              portfolio_id=portfolio_id)
+                return redirect('metrics:portfolio_metrics', portfolio_id=portfolio_id)
     else:
         form = MetricValueForm(instance=metric_value, metric_type=metric_value.metric_type)
     
@@ -233,6 +304,9 @@ def metric_value_edit(request, portfolio_id, position_id=None, value_id=None):
     
     if position:
         context['position'] = position
+    
+    if transaction or metric_value.transaction:
+        context['transaction'] = transaction or metric_value.transaction
     
     return render(request, 'metrics/metric_value_form.html', context)
 

@@ -13,4 +13,5 @@ urlpatterns = [
     path('<uuid:portfolio_id>/position/<uuid:position_id>/transaction/add/', views.transaction_create, name='transaction_create'),
     path('<uuid:portfolio_id>/position/<uuid:position_id>/transaction/<uuid:transaction_id>/edit/', 
          views.transaction_edit, name='transaction_edit'),
+    path('toggle-market-data-updates/', views.toggle_market_data_updates, name='toggle_market_data_updates'),
 ] 

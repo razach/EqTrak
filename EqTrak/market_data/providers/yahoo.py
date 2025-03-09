@@ -3,6 +3,9 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import date, datetime, timedelta
 import pandas as pd
 import logging
+import time
+import requests
+from urllib3.exceptions import MaxRetryError, NewConnectionError
 
 from .base import MarketDataProviderBase
 
@@ -14,13 +17,60 @@ class YahooFinanceProvider(MarketDataProviderBase):
     Uses the yfinance library to fetch data from Yahoo Finance.
     """
     
+    def __init__(self, max_retries=3, retry_delay=2, timeout=10):
+        """
+        Initialize the Yahoo Finance provider
+        
+        Args:
+            max_retries: Maximum number of retries for API calls
+            retry_delay: Delay in seconds between retries
+            timeout: Timeout in seconds for API calls
+        """
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.timeout = timeout
+    
+    def _execute_with_retry(self, func, *args, **kwargs):
+        """
+        Execute a function with retry logic
+        """
+        retries = 0
+        last_error = None
+        
+        while retries < self.max_retries:
+            try:
+                return func(*args, **kwargs)
+            except (requests.exceptions.RequestException, MaxRetryError, NewConnectionError, ConnectionError) as e:
+                last_error = e
+                retries += 1
+                logger.warning(f"API call failed (attempt {retries}/{self.max_retries}): {str(e)}")
+                
+                if "429" in str(e) or "Too Many Requests" in str(e):
+                    # Exponential backoff for rate limiting
+                    sleep_time = self.retry_delay * (2 ** (retries - 1))
+                    logger.warning(f"Rate limited, waiting {sleep_time} seconds before retry")
+                    time.sleep(sleep_time)
+                else:
+                    time.sleep(self.retry_delay)
+            except Exception as e:
+                # Don't retry other exceptions
+                logger.error(f"Unexpected error: {str(e)}")
+                raise
+        
+        # If we get here, all retries failed
+        logger.error(f"Max retries exceeded: {str(last_error)}")
+        raise last_error
+    
     def get_security_info(self, symbol: str) -> Dict[str, Any]:
         """
         Retrieve basic information about a security from Yahoo Finance
         """
         try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
+            def fetch_info():
+                ticker = yf.Ticker(symbol)
+                return ticker.info
+            
+            info = self._execute_with_retry(fetch_info)
             
             # Extract relevant information
             security_info = {
@@ -40,8 +90,11 @@ class YahooFinanceProvider(MarketDataProviderBase):
         Get the latest available price for a security from Yahoo Finance
         """
         try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period='1d')
+            def fetch_history():
+                ticker = yf.Ticker(symbol)
+                return ticker.history(period='1d')
+            
+            hist = self._execute_with_retry(fetch_history)
             
             if hist.empty:
                 raise ValueError(f"No price data available for {symbol}")
@@ -69,13 +122,15 @@ class YahooFinanceProvider(MarketDataProviderBase):
         Get historical price data from Yahoo Finance
         """
         try:
-            ticker = yf.Ticker(symbol)
+            def fetch_historical():
+                ticker = yf.Ticker(symbol)
+                # If dates are provided, use them; otherwise use period
+                if start_date and end_date:
+                    return ticker.history(start=start_date, end=end_date)
+                else:
+                    return ticker.history(period=period)
             
-            # If dates are provided, use them; otherwise use period
-            if start_date and end_date:
-                hist = ticker.history(start=start_date, end=end_date)
-            else:
-                hist = ticker.history(period=period)
+            hist = self._execute_with_retry(fetch_historical)
             
             if hist.empty:
                 return []
@@ -104,14 +159,20 @@ class YahooFinanceProvider(MarketDataProviderBase):
         Search for securities by name or symbol using Yahoo Finance
         """
         try:
-            # Yahoo Finance doesn't have a great search API in yfinance
-            # This is a simplified implementation
-            tickers = yf.Tickers(query)
+            def fetch_tickers():
+                # Yahoo Finance doesn't have a great search API in yfinance
+                return yf.Tickers(query)
+            
+            tickers = self._execute_with_retry(fetch_tickers)
             results = []
             
             for symbol in tickers.tickers:
                 try:
-                    info = tickers.tickers[symbol].info
+                    def fetch_ticker_info():
+                        return tickers.tickers[symbol].info
+                    
+                    info = self._execute_with_retry(fetch_ticker_info)
+                    
                     if info:
                         results.append({
                             'symbol': symbol,
@@ -119,8 +180,9 @@ class YahooFinanceProvider(MarketDataProviderBase):
                             'exchange': info.get('exchange', ''),
                             'security_type': self._determine_security_type(info)
                         })
-                except:
+                except Exception:
                     # Skip tickers that fail to load
+                    logger.debug(f"Failed to load ticker info for {symbol}")
                     pass
                     
             return results

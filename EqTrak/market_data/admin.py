@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Security, PriceData
+from .models import Security, PriceData, MarketDataSettings
 
 @admin.register(Security)
 class SecurityAdmin(admin.ModelAdmin):
@@ -15,3 +15,8 @@ class PriceDataAdmin(admin.ModelAdmin):
     search_fields = ('security__symbol', 'security__name')
     date_hierarchy = 'date'
     ordering = ('-date',)
+
+@admin.register(MarketDataSettings)
+class MarketDataSettingsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'updates_enabled', 'last_modified']
+    readonly_fields = ['last_modified']

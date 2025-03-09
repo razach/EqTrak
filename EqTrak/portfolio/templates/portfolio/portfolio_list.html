@@ -14,6 +14,29 @@
             <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary">Create New Portfolio</a>
         </div>
     </div>
+    
+    <!-- Market Data Updates Toggle -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Market Data Updates</h5>
+                            <p class="text-muted small mb-0">Toggle automatic updates of price data from external sources</p>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="marketDataToggle" 
+                                {% if market_data_updates_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="marketDataToggle">
+                                {% if market_data_updates_enabled %}Enabled{% else %}Disabled{% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {% if portfolios %}
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
@@ -78,5 +101,44 @@
 </div>
 
 {% include 'metrics/components/metric_types_list.html' %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleSwitch = document.getElementById('marketDataToggle');
+        const toggleLabel = toggleSwitch.nextElementSibling;
+        
+        toggleSwitch.addEventListener('change', function() {
+            const enabled = this.checked;
+            
+            // Update the label
+            toggleLabel.textContent = enabled ? 'Enabled' : 'Disabled';
+            
+            // Send request to update the setting
+            fetch('{% url "portfolio:toggle_market_data_updates" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `enabled=${enabled}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Failed to update setting');
+                    // Revert the toggle if there was an error
+                    this.checked = !enabled;
+                    toggleLabel.textContent = !enabled ? 'Enabled' : 'Disabled';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert the toggle if there was an error
+                this.checked = !enabled;
+                toggleLabel.textContent = !enabled ? 'Enabled' : 'Disabled';
+            });
+        });
+    });
+</script>
 
 {% endblock %} 

@@ -5,8 +5,10 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
+from django.db.models import Q
+from django.conf import settings
 
-from .models import Security, PriceData
+from .models import Security, PriceData, MarketDataSettings
 from .providers.factory import get_provider
 
 logger = logging.getLogger(__name__)
@@ -90,6 +92,19 @@ class MarketDataService:
                 'source': latest_price.source,
                 'is_stale': False
             }
+        
+        # Check if updates are enabled before making API call
+        if not MarketDataSettings.is_updates_enabled():
+            # If updates are disabled and we have any price, mark it as stale but return it
+            if latest_price:
+                return {
+                    'date': latest_price.date.isoformat(),
+                    'price': latest_price.close,
+                    'source': latest_price.source,
+                    'is_stale': True
+                }
+            else:
+                raise ValueError(f"No price data available for {security.symbol} and market data updates are disabled")
             
         # Otherwise fetch latest price from provider
         try:
@@ -183,6 +198,27 @@ class MarketDataService:
                 }
                 for price in cached_prices
             ]
+        
+        # Check if updates are enabled
+        if not MarketDataSettings.is_updates_enabled():
+            # If we have any data, return what we have and don't fetch more
+            if cached_prices.exists():
+                logger.warning(f"Market data updates disabled. Returning partial history for {security.symbol}.")
+                return [
+                    {
+                        'date': price.date.isoformat(),
+                        'open': float(price.open),
+                        'high': float(price.high),
+                        'low': float(price.low),
+                        'close': float(price.close),
+                        'adj_close': float(price.adj_close),
+                        'volume': int(price.volume)
+                    }
+                    for price in cached_prices
+                ]
+            else:
+                logger.warning(f"Market data updates disabled and no history available for {security.symbol}.")
+                return []
             
         # Otherwise fetch from provider and cache results
         try:
@@ -303,6 +339,11 @@ class MarketDataService:
         Returns:
             True if successful, False otherwise
         """
+        # Check if updates are enabled
+        if not MarketDataSettings.is_updates_enabled():
+            logger.warning(f"Market data updates are disabled. Skipping refresh for {security}.")
+            return False
+            
         if isinstance(security, str):
             security = MarketDataService.get_or_create_security(security)
             
@@ -355,6 +396,11 @@ class MarketDataService:
         Returns:
             Updated metric value or None if update failed
         """
+        # Check if updates are enabled before doing anything
+        if not MarketDataSettings.is_updates_enabled():
+            logger.debug(f"Market data updates are disabled. Skipping sync for {position.ticker}.")
+            return None
+            
         try:
             from metrics.models import MetricType, MetricValue
             
@@ -365,8 +411,12 @@ class MarketDataService:
                 logger.error(f"Error getting security for {position.ticker}: {e}")
                 return None
                 
-            # Get latest price data
-            latest_price = MarketDataService.get_latest_price(security)
+            # Get latest price data - the get_latest_price method now checks if updates are enabled
+            try:
+                latest_price = MarketDataService.get_latest_price(security)
+            except ValueError as e:
+                logger.warning(f"Could not get latest price for {position.ticker}: {e}")
+                return None
             
             # Get or create the Market Price metric type
             market_price_metric, _ = MetricType.objects.get_or_create(

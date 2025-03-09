@@ -93,7 +93,7 @@
                                                         <i class="bi bi-clock-history"></i> History
                                                     </a>
                                                     {% if metric_type.data_type == 'MEMO' %}
-                                                        <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id %}?metric_type={{ metric_type.metric_id }}" 
+                                                        <a href="{% url 'metrics:portfolio_metric_value_create' portfolio.portfolio_id %}?metric_type={{ metric_type.metric_id }}" 
                                                            class="btn btn-sm btn-outline-success">
                                                             <i class="bi bi-plus"></i> Add Entry
                                                         </a>

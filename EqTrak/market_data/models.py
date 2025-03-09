@@ -76,3 +76,30 @@ class PriceData(models.Model):
         
     def __str__(self):
         return f"{self.security.symbol} - {self.date}: {self.close}"
+
+
+class MarketDataSettings(models.Model):
+    """
+    Stores system-wide settings for market data updates
+    """
+    updates_enabled = models.BooleanField(default=True, help_text="Enable or disable automatic market data updates")
+    last_modified = models.DateTimeField(auto_now=True)
+    
+    @classmethod
+    def get_instance(cls):
+        """Get or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+    
+    @classmethod
+    def is_updates_enabled(cls):
+        """Check if market data updates are enabled"""
+        return cls.get_instance().updates_enabled
+    
+    @classmethod
+    def set_updates_enabled(cls, enabled):
+        """Set the market data updates enabled state"""
+        instance = cls.get_instance()
+        instance.updates_enabled = enabled
+        instance.save()
+        return instance

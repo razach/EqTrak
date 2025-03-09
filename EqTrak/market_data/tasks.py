@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Security, PriceData
+from .models import Security, PriceData, MarketDataSettings
 from .services import MarketDataService
 from .providers.factory import get_provider
 
@@ -21,6 +21,11 @@ def update_price_data_for_active_securities():
     - Scheduled via cron/Celery
     - In response to user refresh request
     """
+    # Check if updates are enabled
+    if not MarketDataSettings.is_updates_enabled():
+        logger.warning("Market data updates are disabled. Skipping update.")
+        return 0, 0
+        
     logger.info("Updating price data for active securities")
     active_securities = Security.objects.filter(active=True)
     updated = 0
