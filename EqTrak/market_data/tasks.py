@@ -6,6 +6,7 @@ import time
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 from .models import Security, PriceData, MarketDataSettings
 from .services import MarketDataService
@@ -13,17 +14,25 @@ from .providers.factory import get_provider
 
 logger = logging.getLogger(__name__)
 
-def update_price_data_for_active_securities():
+def update_price_data_for_active_securities(user=None):
     """
     Update price data for all active securities.
     This function can be called:
     - Manually via management command
     - Scheduled via cron/Celery
     - In response to user refresh request
+    
+    Args:
+        user: Optional user context. If provided, will check user-specific settings.
     """
-    # Check if updates are enabled
+    # Check if updates are enabled at system level
     if not MarketDataSettings.is_updates_enabled():
-        logger.warning("Market data updates are disabled. Skipping update.")
+        logger.warning("Market data updates are disabled at system level. Skipping update.")
+        return 0, 0
+        
+    # If user provided, check user-specific setting
+    if user and not MarketDataService.is_updates_enabled(user):
+        logger.info(f"Market data updates disabled for user {user.username}. Skipping update.")
         return 0, 0
         
     logger.info("Updating price data for active securities")
@@ -33,7 +42,7 @@ def update_price_data_for_active_securities():
     
     for security in active_securities:
         try:
-            updated_ok = MarketDataService.refresh_security_data(security)
+            updated_ok = MarketDataService.refresh_security_data(security, user)
             if updated_ok:
                 updated += 1
             else:

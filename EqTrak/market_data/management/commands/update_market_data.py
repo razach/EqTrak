@@ -3,6 +3,7 @@ import logging
 
 from market_data.tasks import update_price_data_for_active_securities
 from market_data.models import Security, MarketDataSettings
+from market_data.services import MarketDataService
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,7 @@ class Command(BaseCommand):
             try:
                 security = Security.objects.get(symbol__iexact=symbol)
                 self.stdout.write(f"Updating data for {security.symbol}...")
-                from market_data.services import MarketDataService
-                if MarketDataService.refresh_security_data(security):
+                if MarketDataService.refresh_security_data(security, user=None):
                     self.stdout.write(self.style.SUCCESS(f"Successfully updated {security.symbol}"))
                 else:
                     self.stdout.write(self.style.ERROR(f"Failed to update {security.symbol}"))
@@ -35,6 +35,6 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Security not found: {symbol}"))
         else:
             self.stdout.write("Updating price data for all active securities...")
-            updated, failed = update_price_data_for_active_securities()
+            updated, failed = update_price_data_for_active_securities(user=None)
             self.stdout.write(self.style.SUCCESS(f"Updated: {updated}, Failed: {failed}"))
 

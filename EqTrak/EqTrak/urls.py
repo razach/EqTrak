@@ -30,4 +30,5 @@ urlpatterns = [
     path('portfolio/', include('portfolio.urls')),  # We'll create this next
     path('signup/', SignUpView.as_view(), name='signup'),
     path('metrics/', include('metrics.urls')),
+    path('users/', include('users.urls')),  # Include users app URLs
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

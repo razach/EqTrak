@@ -1,17 +1,68 @@
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Callable, TypeVar, cast
 from datetime import date, datetime, timedelta
 import logging
 from decimal import Decimal
+import functools
 
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from django.conf import settings
+from django.contrib.auth.models import User
 
 from .models import Security, PriceData, MarketDataSettings
 from .providers.factory import get_provider
 
 logger = logging.getLogger(__name__)
+
+# Type variable for the decorator
+T = TypeVar('T')
+
+def check_market_data_access(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Decorator to check if market data access is enabled before executing the decorated function.
+    Checks both system-wide settings and user-specific settings if a user is provided.
+    
+    Usage:
+        @check_market_data_access
+        def some_function_that_accesses_market_data(self, user=None, ...):
+            # This will only execute if market data access is allowed
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Try to find the user parameter
+        user = kwargs.get('user')
+        
+        # Check service class methods where 'self' is first arg and user might be positional
+        if user is None and len(args) > 1 and isinstance(args[0], MarketDataService):
+            # For instance methods: check if there's a user in positional args
+            # Method signature would be (self, param1, param2, user=None, ...)
+            method = func.__code__
+            param_names = method.co_varnames[:method.co_argcount]
+            if 'user' in param_names:
+                user_index = param_names.index('user')
+                if user_index < len(args):  # User is provided as positional arg
+                    user = args[user_index]
+        
+        # Check if market data is enabled
+        if not MarketDataService.is_updates_enabled(user):
+            logger.info(f"Market data access blocked for {'system' if user is None else user.username}")
+            
+            # Return appropriate fallback value based on function's return annotation
+            return_annotation = func.__annotations__.get('return')
+            if return_annotation is bool:
+                return False
+            elif return_annotation in (dict, Dict):
+                return {}
+            elif return_annotation in (list, List):
+                return []
+            else:
+                return None
+                
+        # Market data access is allowed, proceed with the function call
+        return func(*args, **kwargs)
+        
+    return cast(Callable[..., T], wrapper)
 
 class MarketDataService:
     """
@@ -20,12 +71,14 @@ class MarketDataService:
     """
     
     @staticmethod
-    def get_or_create_security(symbol: str) -> Security:
+    @check_market_data_access
+    def get_or_create_security(symbol: str, user=None) -> Security:
         """
         Get a security by symbol or create it if it doesn't exist.
         
         Args:
             symbol: The ticker symbol to look up
+            user: Optional user context for permissions
             
         Returns:
             Security object
@@ -62,290 +115,170 @@ class MarketDataService:
             return security
             
     @staticmethod
-    def get_latest_price(security: Union[Security, str]) -> Dict[str, Any]:
+    @check_market_data_access
+    def get_latest_price(security: Union[Security, str], user=None) -> Dict[str, Any]:
         """
-        Get the latest price for a security.
+        Get the latest price data for a security.
         
         Args:
-            security: Security object or symbol string
+            security: Security object or ticker symbol
+            user: Optional user context for permissions
             
         Returns:
-            Dictionary with price information
-            
-        Raises:
-            ValueError: If no price data is available
+            Dict containing price data
         """
         if isinstance(security, str):
-            security = MarketDataService.get_or_create_security(security)
+            security = MarketDataService.get_or_create_security(security, user=user)
             
-        # Check for recent cached price
-        latest_price = PriceData.objects.filter(
-            security=security
-        ).order_by('-date').first()
+        provider = get_provider()
+        price_data = provider.get_latest_price(security.symbol)
         
-        # If we have a recent price (today or yesterday during weekend/holiday), return it
-        if (latest_price and 
-            (latest_price.date >= date.today() - timedelta(days=3))):
-            return {
-                'date': latest_price.date.isoformat(),
-                'price': latest_price.close,
-                'source': latest_price.source,
-                'is_stale': False
-            }
+        # Convert price data to a standardized format
+        result = {
+            'symbol': security.symbol,
+            'date': price_data['date'],
+            'price': price_data['close'],
+            'change': price_data.get('change', None),
+            'change_percent': price_data.get('change_percent', None),
+            'volume': price_data.get('volume', None),
+            'timestamp': datetime.now().isoformat()
+        }
         
-        # Check if updates are enabled before making API call
-        if not MarketDataSettings.is_updates_enabled():
-            # If updates are disabled and we have any price, mark it as stale but return it
-            if latest_price:
-                return {
-                    'date': latest_price.date.isoformat(),
-                    'price': latest_price.close,
-                    'source': latest_price.source,
-                    'is_stale': True
-                }
-            else:
-                raise ValueError(f"No price data available for {security.symbol} and market data updates are disabled")
-            
-        # Otherwise fetch latest price from provider
-        try:
-            provider = get_provider()
-            price_data = provider.get_latest_price(security.symbol)
-            
-            # Save the new price data
-            price_date = date.fromisoformat(price_data['date'])
-            price, created = PriceData.objects.update_or_create(
-                security=security,
-                date=price_date,
-                defaults={
-                    'open': price_data['open'],
-                    'high': price_data['high'],
-                    'low': price_data['low'],
-                    'close': price_data['close'],
-                    'adj_close': price_data['adj_close'],
-                    'volume': price_data['volume'],
-                    'source': provider.__class__.__name__
-                }
-            )
-            
-            return {
-                'date': price_date.isoformat(),
-                'price': price.close,
-                'source': price.source,
-                'is_stale': False
-            }
-        except Exception as e:
-            logger.error(f"Error fetching latest price for {security.symbol}: {e}")
-            
-            # If we have any historical price, return it but mark as stale
-            if latest_price:
-                return {
-                    'date': latest_price.date.isoformat(),
-                    'price': latest_price.close,
-                    'source': latest_price.source,
-                    'is_stale': True
-                }
-                
-            raise ValueError(f"No price data available for {security.symbol}")
+        return result
     
     @staticmethod
+    @check_market_data_access
     def get_price_history(
         security: Union[Security, str],
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
-        days: Optional[int] = None
+        days: Optional[int] = None,
+        user=None
     ) -> List[Dict[str, Any]]:
         """
         Get historical price data for a security.
         
         Args:
-            security: Security object or symbol string
-            start_date: Start date for data (optional)
-            end_date: End date for data (optional, defaults to today)
-            days: Number of days of history (alternative to start_date)
+            security: Security object or ticker symbol
+            start_date: Optional start date (defaults to 1 year ago)
+            end_date: Optional end date (defaults to today)
+            days: Optional number of days to retrieve (alternative to start_date)
+            user: Optional user context for permissions
             
         Returns:
-            List of dictionaries with price data
+            List of dicts with historical price data
         """
         if isinstance(security, str):
-            security = MarketDataService.get_or_create_security(security)
+            security = MarketDataService.get_or_create_security(security, user=user)
             
-        if end_date is None:
+        if not end_date:
             end_date = date.today()
             
-        if start_date is None and days:
+        if days:
             start_date = end_date - timedelta(days=days)
-        elif start_date is None:
-            start_date = end_date - timedelta(days=30)  # Default to 30 days
+        elif not start_date:
+            # Default to 1 year history
+            start_date = end_date - timedelta(days=365)
             
-        # First check our database for cached price history
-        cached_prices = PriceData.objects.filter(
-            security=security,
-            date__gte=start_date,
-            date__lte=end_date
-        ).order_by('date')
+        provider = get_provider()
+        price_data_list = provider.get_historical_prices(
+            security.symbol,
+            start_date=start_date,
+            end_date=end_date
+        )
         
-        # If we have complete data for the requested period, return it
-        if cached_prices.count() >= (end_date - start_date).days * 0.7:  # Allow for weekends/holidays
-            return [
-                {
-                    'date': price.date.isoformat(),
-                    'open': float(price.open),
-                    'high': float(price.high),
-                    'low': float(price.low),
-                    'close': float(price.close),
-                    'adj_close': float(price.adj_close),
-                    'volume': int(price.volume)
-                }
-                for price in cached_prices
-            ]
-        
-        # Check if updates are enabled
-        if not MarketDataSettings.is_updates_enabled():
-            # If we have any data, return what we have and don't fetch more
-            if cached_prices.exists():
-                logger.warning(f"Market data updates disabled. Returning partial history for {security.symbol}.")
-                return [
-                    {
-                        'date': price.date.isoformat(),
-                        'open': float(price.open),
-                        'high': float(price.high),
-                        'low': float(price.low),
-                        'close': float(price.close),
-                        'adj_close': float(price.adj_close),
-                        'volume': int(price.volume)
-                    }
-                    for price in cached_prices
-                ]
-            else:
-                logger.warning(f"Market data updates disabled and no history available for {security.symbol}.")
-                return []
+        # Convert to standard format
+        result = []
+        for price_data in price_data_list:
+            result.append({
+                'symbol': security.symbol,
+                'date': price_data['date'],
+                'open': price_data['open'],
+                'high': price_data['high'],
+                'low': price_data['low'],
+                'close': price_data['close'],
+                'volume': price_data['volume']
+            })
             
-        # Otherwise fetch from provider and cache results
-        try:
-            provider = get_provider()
-            price_data_list = provider.get_historical_prices(
-                security.symbol,
-                start_date=start_date,
-                end_date=end_date
-            )
-            
-            # Process and save the new price data
-            with transaction.atomic():
-                for price_data in price_data_list:
-                    price_date = date.fromisoformat(price_data['date'])
-                    PriceData.objects.update_or_create(
-                        security=security,
-                        date=price_date,
-                        defaults={
-                            'open': price_data['open'],
-                            'high': price_data['high'],
-                            'low': price_data['low'],
-                            'close': price_data['close'],
-                            'adj_close': price_data['adj_close'],
-                            'volume': price_data['volume'],
-                            'source': provider.__class__.__name__
-                        }
-                    )
-            
-            # Return the newly fetched and saved data
-            updated_prices = PriceData.objects.filter(
-                security=security,
-                date__gte=start_date,
-                date__lte=end_date
-            ).order_by('date')
-            
-            return [
-                {
-                    'date': price.date.isoformat(),
-                    'open': float(price.open),
-                    'high': float(price.high),
-                    'low': float(price.low),
-                    'close': float(price.close),
-                    'adj_close': float(price.adj_close),
-                    'volume': int(price.volume)
-                }
-                for price in updated_prices
-            ]
-        except Exception as e:
-            logger.error(f"Error fetching price history for {security.symbol}: {e}")
-            
-            # If we have any cached data, return that partial result
-            if cached_prices.exists():
-                return [
-                    {
-                        'date': price.date.isoformat(),
-                        'open': float(price.open),
-                        'high': float(price.high),
-                        'low': float(price.low),
-                        'close': float(price.close),
-                        'adj_close': float(price.adj_close),
-                        'volume': int(price.volume)
-                    }
-                    for price in cached_prices
-                ]
-                
-            raise ValueError(f"Unable to retrieve price history for {security.symbol}: {e}")
+        return result
     
     @staticmethod
-    def search_securities(query: str) -> List[Dict[str, Any]]:
+    @check_market_data_access
+    def search_securities(query: str, user=None) -> List[Dict[str, Any]]:
         """
-        Search for securities by name or symbol.
+        Search for securities matching the query.
         
         Args:
-            query: Search query string
+            query: Search term (partial symbol or name)
+            user: Optional user context for permissions
             
         Returns:
             List of matching securities
         """
-        # First try to find matches in our database
-        db_results = Security.objects.filter(
-            symbol__icontains=query
-        ).union(
-            Security.objects.filter(name__icontains=query)
-        )[:10]
+        # Try local search first
+        local_results = Security.objects.filter(
+            Q(symbol__icontains=query) | Q(name__icontains=query)
+        )[:5]  # Limit to 5 results
         
-        if db_results.exists():
+        if local_results.exists():
             return [
                 {
                     'symbol': security.symbol,
                     'name': security.name,
-                    'exchange': security.exchange,
-                    'security_type': security.security_type
+                    'type': security.security_type,
+                    'exchange': security.exchange
                 }
-                for security in db_results
+                for security in local_results
             ]
         
-        # If no matches in our database, search via provider
-        try:
-            provider = get_provider()
-            results = provider.search_securities(query)
-            
-            # Optionally save these securities to our database
-            # This could be done in the background
-            
-            return results
-        except Exception as e:
-            logger.error(f"Error searching securities for '{query}': {e}")
-            return []
+        # If no local results, try provider search
+        provider = get_provider()
+        return provider.search_securities(query)
     
     @staticmethod
-    def refresh_security_data(security: Union[Security, str]) -> bool:
+    def is_updates_enabled(user=None):
         """
-        Refresh all data for a security.
+        Check if market data updates are enabled, considering both system and user settings.
+        System settings override user preferences.
         
         Args:
-            security: Security object or symbol string
+            user: Optional user to check settings for. If None, only system setting is checked.
             
         Returns:
-            True if successful, False otherwise
+            bool: True if updates are enabled, False otherwise
         """
-        # Check if updates are enabled
+        # System-wide setting takes precedence - if disabled at system level, nothing can override it
         if not MarketDataSettings.is_updates_enabled():
-            logger.warning(f"Market data updates are disabled. Skipping refresh for {security}.")
             return False
             
+        # If no user provided, return system setting
+        if user is None:
+            return True
+            
+        # Check user-specific setting
+        try:
+            return user.settings.market_data_enabled
+        except (AttributeError, Exception):
+            # Default to True if user settings don't exist
+            return True
+            
+    @staticmethod
+    @check_market_data_access
+    def refresh_security_data(security: Union[Security, str], user=None) -> bool:
+        """
+        Refresh price data for a security.
+        
+        Args:
+            security: Security object or ticker symbol
+            user: Optional user context for permissions check
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        # Note: permissions check handled by the decorator
+            
         if isinstance(security, str):
-            security = MarketDataService.get_or_create_security(security)
+            security = MarketDataService.get_or_create_security(security, user=user)
             
         try:
             # Refresh security info
@@ -377,74 +310,70 @@ class MarketDataService:
                 }
             )
             
-            # Success
             return True
             
         except Exception as e:
-            logger.error(f"Error refreshing data for {security.symbol}: {e}")
+            logger.error(f"Error refreshing data for {getattr(security, 'symbol', security)}: {e}")
             return False
 
     @staticmethod
-    def sync_price_with_metrics(position):
+    @check_market_data_access
+    def sync_price_with_metrics(position, user=None):
         """
         Synchronize latest price data with the metrics system.
         Only updates the Market Price metric, leaving Current Value to be computed dynamically.
         
         Args:
             position: Position object to update metrics for
+            user: Optional user context for permissions check
             
         Returns:
             Updated metric value or None if update failed
         """
-        # Check if updates are enabled before doing anything
-        if not MarketDataSettings.is_updates_enabled():
-            logger.debug(f"Market data updates are disabled. Skipping sync for {position.ticker}.")
-            return None
+        # Note: Access check is now handled by the decorator
             
         try:
             from metrics.models import MetricType, MetricValue
             
             # Get security by ticker since Position doesn't have a direct security field
             try:
-                security = MarketDataService.get_or_create_security(position.ticker)
+                security = MarketDataService.get_or_create_security(position.ticker, user=user)
             except Exception as e:
                 logger.error(f"Error getting security for {position.ticker}: {e}")
                 return None
                 
-            # Get latest price data - the get_latest_price method now checks if updates are enabled
+            # Get latest price data
             try:
-                latest_price = MarketDataService.get_latest_price(security)
+                latest_price = MarketDataService.get_latest_price(security, user=user)
             except ValueError as e:
                 logger.warning(f"Could not get latest price for {position.ticker}: {e}")
                 return None
-            
-            # Get or create the Market Price metric type
-            market_price_metric, _ = MetricType.objects.get_or_create(
-                name='Market Price',
-                defaults={
-                    'scope_type': 'POSITION',
-                    'data_type': 'PRICE',
-                    'is_system': True,
-                    'description': 'Current market price from data provider'
-                }
-            )
+                
+            # Find "Market Price" metric
+            try:
+                market_price_metric = MetricType.objects.get(
+                    code='MARKET_PRICE',
+                    scope_type='POSITION',
+                    is_system=True
+                )
+            except MetricType.DoesNotExist:
+                logger.error("MARKET_PRICE metric type not found")
+                return None
             
             # Create or update the metric value
-            price_date = date.fromisoformat(latest_price['date'])
             metric_value, created = MetricValue.objects.update_or_create(
-                position=position,
                 metric_type=market_price_metric,
-                date=price_date,
+                position=position,
                 defaults={
                     'value': latest_price['price'],
-                    'source': latest_price['source'],
-                    'is_forecast': False,
-                    'notes': 'Auto-updated from market data service'
+                    'value_date': date.fromisoformat(latest_price['date']),
                 }
             )
             
+            logger.debug(f"Updated market price metric for {position.ticker}: {metric_value.value}")
             return metric_value
+            
         except Exception as e:
-            logger.error(f"Error syncing price metrics for {position}: {e}")
+            logger.error(f"Error syncing price with metrics for {position.ticker}: {e}")
             return None
 
