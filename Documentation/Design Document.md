@@ -78,24 +78,32 @@ The Market Data app implements a provider pattern to allow for flexible data sou
 
 2. **Provider Implementations**
    - Yahoo Finance (`market_data/providers/yahoo.py`)
+   - Alpha Vantage (`market_data/providers/alpha_vantage.py`)
    - Future providers can be added with minimal changes
 
 3. **Provider Configuration**
-   - Provider selection via settings
-   - Fallback mechanisms for data reliability
-   - Toggle system for enabling/disabling market data updates
+   - System-level provider selection via settings
+   - User-level provider preferences override system defaults
+   - Encrypted storage of provider API keys
+   - Factory pattern for provider selection based on context
 
 ```python
 # Provider selection example
-MARKET_DATA_PROVIDER = 'yahoo'  # Can be changed to other providers as needed
+MARKET_DATA_PROVIDER = 'yahoo'  # System default, can be overridden by user preferences
 ```
+
+4. **User Provider Preferences**
+   - Users can select their preferred data provider
+   - API key management for providers requiring authentication
+   - Encrypted storage of sensitive API credentials
+   - Dynamic form UI that adapts to selected provider
 
 ### Market Data Updates Control
 
 The application provides a user-friendly toggle to enable or disable market data updates system-wide:
 
 1. **Toggle Interface**
-   - Available on the Portfolios homepage
+   - Available on the Settings page
    - Simple switch UI for immediate control
    - Visual feedback on current status
 
@@ -103,11 +111,13 @@ The application provides a user-friendly toggle to enable or disable market data
    - Singleton settings model (`MarketDataSettings`) stores toggle state
    - Centralized checking through `is_updates_enabled()` method
    - Graceful degradation when updates are disabled (shows cached data)
+   - User-specific toggle to override system settings (when enabled)
 
 3. **API Call Prevention**
    - When disabled, prevents external API calls from all app components
    - Management commands respect the toggle (with override option)
    - Service methods check toggle state before external requests
+   - Decorator pattern for consistent access control
 
 ### Data Flow Between Apps
 
@@ -137,10 +147,12 @@ To minimize external API calls:
 2. **Recency Rules**
    - Market prices considered stale after configurable time
    - Different freshness requirements for different use cases
+   - Single price fetch per day unless forced refresh
 
 3. **Cache Invalidation**
    - Time-based expiry for current prices
    - Manual refresh options for immediate updates
+   - Database storage of fetched prices for reuse
 
 ### Error Handling
 

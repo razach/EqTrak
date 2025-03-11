@@ -5,14 +5,16 @@ This document explains how to implement the app toggle pattern for new Django ap
 1. Admin-level system-wide control of features
 2. User-specific preferences for enabling/disabling features
 3. Clear visual indication of feature status
+4. User-specific provider selections and API key management
 
 ## Architecture Overview
 
-The app toggle pattern consists of three main components:
+The app toggle pattern consists of these main components:
 
 1. **System-wide Settings**: Managed by admin, can disable features site-wide
-2. **User-specific Settings**: Allow users to toggle features according to their preferences
+2. **User-specific Settings**: Allow users to toggle features and select providers according to their preferences
 3. **Access Control Logic**: Checks both system and user settings when accessing features
+4. **Provider Factory**: Selects the appropriate service provider based on user preferences
 
 ## Implementation Steps for New App Modules
 
@@ -94,6 +96,29 @@ class UserSettings(models.Model):
         verbose_name="Enable Your Feature",
         help_text="Enable or disable your feature for your account"
     )
+    
+    # If your feature uses providers, add provider selection
+    YOUR_PROVIDER_CHOICES = [
+        ('system', 'System Default'),
+        ('provider1', 'Provider 1'),
+        ('provider2', 'Provider 2'),
+    ]
+    
+    your_feature_provider = models.CharField(
+        max_length=20,
+        choices=YOUR_PROVIDER_CHOICES,
+        default='system',
+        verbose_name="Your Feature Provider",
+        help_text="Select which provider to use for your feature"
+    )
+    
+    # If your providers need API keys, use EncryptedCharField
+    provider1_api_key = EncryptedCharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        verbose_name="Provider 1 API Key"
+    )
 ```
 
 Don't forget to create and apply migrations:
@@ -162,11 +187,47 @@ def check_feature_access(func):
     return wrapper
 ```
 
-### 6. Create a Service Layer
+### 6. Create a Service Layer with Provider Factory
 
-Implement a service layer with the decorator applied to methods:
+Implement a service layer with the decorator applied to methods, and use a provider factory:
 
 ```python
+class YourProviderFactory:
+    """Factory for creating your feature providers."""
+    
+    @staticmethod
+    def get_provider(user=None):
+        """
+        Get the provider based on system settings and user preferences.
+        
+        Args:
+            user: Optional user to consider provider preferences for
+            
+        Returns:
+            An instance of the appropriate provider.
+        """
+        # Default to system setting
+        provider_name = getattr(settings, 'YOUR_FEATURE_PROVIDER', 'default_provider')
+        
+        # If user is provided, check for user preference
+        if user is not None and hasattr(user, 'settings'):
+            if user.settings.your_feature_provider != 'system':
+                provider_name = user.settings.your_feature_provider
+        
+        if provider_name == 'provider1':
+            provider = Provider1()
+            # If user has a custom API key, use it
+            if user and hasattr(user, 'settings') and user.settings.provider1_api_key:
+                provider.api_key = user.settings.provider1_api_key
+            return provider
+        elif provider_name == 'provider2':
+            return Provider2()
+            
+        # Add more providers as needed
+        
+        # Default provider
+        return DefaultProvider()
+
 class YourAppService:
     """Service for interacting with your feature"""
     
@@ -194,11 +255,11 @@ class YourAppService:
     @check_feature_access
     def your_feature_method(param1, param2, user=None):
         """
-        Implement your feature method.
+        Implement your feature method using the appropriate provider.
         Access control will be handled by the decorator.
         """
-        # Your implementation here
-        pass
+        provider = YourProviderFactory.get_provider(user)
+        return provider.do_something(param1, param2)
 ```
 
 ### 7. Update the App Toggle Status Template
@@ -300,4 +361,4 @@ For background tasks or management commands:
 def your_scheduled_task():
     # For system-wide tasks, pass user=None
     YourAppService.your_feature_method(param1, param2, user=None)
-``` 
+```

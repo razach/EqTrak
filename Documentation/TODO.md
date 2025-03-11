@@ -18,6 +18,8 @@ This is the core app that handles all user level config and metadata
 
 - [X] **App Toogles**: Implement a user specific config section with the ability to turn on and off specific app modules.
     Goals: Allows the user to turn on and off features they don't need or want. Core app functions of portfolio and metrics cannot be turned off
+- [X] **Market Data Provider Preferences**: Implement user-specific provider selection and API key management.
+    Goals: Allow users to choose their preferred data sources and provide API keys
 
 
 ### Metric Module
@@ -82,14 +84,20 @@ This is the minor app that handles the API calls to get data from external sourc
 - [ ] **Error Handling**: Improve error handling for market data failures
 - [ ] **Stale Data Indicators**: Clearer visual indicators for stale data
 
+### Provider Management
+- [x] **Provider Selection**: Allow users to select their preferred market data provider
+- [x] **API Key Management**: Add secure storage for user-provided API keys
+- [x] **Provider Factory**: Implement factory pattern for selecting providers based on user preference
+- [ ] **Provider Comparison**: Add tools to compare data quality between providers
+
 ### Performance Optimization
+- [ ] **Caching Strategy**: Implement database caching for market data to reduce API calls (I believe there is a defect with the current implementation)
 - [ ] **Database Indexing**: Review and optimize indices for market_data models
 - [ ] **Query Optimization**: Review and optimize queries in MarketDataService
-- [ ] **Caching**: Implement response caching for frequent market data requests
 
 ## Technical Debt
 - [ ] **Test Coverage**: Increase test coverage for market_data app
 - [ ] **Documentation**: Update API documentation for MarketDataService
-- [ ] **Provider Abstraction**: Review and improve the provider abstraction
+- [x] **Provider Abstraction**: Review and improve the provider abstraction
 - [ ] **Error Logging**: Enhance error logging for market data operations
 
