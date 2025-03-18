@@ -52,3 +52,7 @@ Requirements/test_users.md
 
 # Test data
 EqTrak/users/migrations/0002_add_initial_users.py
+
+# Migration backups
+EqTrak/migration_backup/
+migration_backup/
