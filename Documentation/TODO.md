@@ -16,7 +16,7 @@ This is the main / core app within the django project.
 ### User APP Updates
 This is the core app that handles all user level config and metadata
 
-- [X] **App Toogles**: Implement a user specific config section with the ability to turn on and off specific app modules.
+- [x] **App Toogles**: Implement a user specific config section with the ability to turn on and off specific app modules.
     Goals: Allows the user to turn on and off features they don't need or want. Core app functions of portfolio and metrics cannot be turned off
 - [X] **Market Data Provider Preferences**: Implement user-specific provider selection and API key management.
     Goals: Allow users to choose their preferred data sources and provide API keys
@@ -35,8 +35,18 @@ This is a minor app that handles user level custom metrics
 
 ## Priority Tasks
 
-- [ ] **User Defined Metrics**: Implement functionality in a separate app for users to define and track custom metrics
-- [ ] **Move the add metric functionality over**: Move the add new metric functionality over to this separate app.
+- [x] **User Defined Metrics**: Implement functionality in a separate app for users to define and track custom metrics
+- [x] **Move the add metric functionality over**: Move the add new metric functionality over to this separate app.
+
+### Suggested Future Improvements
+
+- [ ] **Formula Validation**: Add validation for user-defined formulas to prevent errors
+- [ ] **Formula Testing Tool**: Create a testing interface where users can try formulas before saving
+- [ ] **Sharing Custom Metrics**: Allow users to share their custom metrics with other users
+- [ ] **Metric Categories**: Add ability to categorize custom metrics for better organization
+- [ ] **Custom Metric Templates**: Provide pre-built templates for common custom metrics
+- [ ] **Conditional UI Display**: Update all UI elements to respect the user_metrics_enabled setting
+- [ ] **Improved Error Handling**: Add better error handling for formula execution failures
 
 
 ### Market Data Integration

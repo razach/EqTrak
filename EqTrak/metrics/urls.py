@@ -26,4 +26,6 @@ urlpatterns = [
          views.metric_history, name='position_metric_history'),
     path('<uuid:portfolio_id>/position/<uuid:position_id>/transaction/<uuid:transaction_id>/',
          views.transaction_metrics, name='transaction_metrics'),
+    # Add a new URL pattern for portfolio-level metric value editing
+    path('<uuid:portfolio_id>/<uuid:value_id>/edit/', views.metric_value_edit, name='metric_value_edit'),
 ] 

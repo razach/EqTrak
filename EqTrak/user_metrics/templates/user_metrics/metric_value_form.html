@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    Add Value - {{ user_metric.name }} - 
+    {% if transaction %}
+        {{ position.ticker }} Transaction ({{ transaction.date|date:"Y-m-d" }})
+    {% elif position %}
+        {{ position.ticker }}
+    {% else %}
+        {{ portfolio.name }}
+    {% endif %} - EqTrak
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-4">
+        {% if transaction %}
+            <a href="{% url 'metrics:transaction_metrics' portfolio.portfolio_id position.position_id transaction.transaction_id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Transaction Metrics
+            </a>
+        {% elif position %}
+            <a href="{% url 'metrics:position_metrics' portfolio.portfolio_id position.position_id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Position Metrics
+            </a>
+        {% else %}
+            <a href="{% url 'metrics:portfolio_metrics' portfolio.portfolio_id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Portfolio Metrics
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ title }}</h2>
+                    <p class="text-muted mb-0">
+                        {% if metric_type %}{{ metric_type.name }}{% else %}Add Metric Value{% endif %}
+                        {% if position %} for {{ position.ticker }}{% endif %}
+                    </p>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if metric_type.data_type == 'MEMO' %}
+                            <!-- Text Value field for MEMO type -->
+                            <div class="mb-3">
+                                <label for="{{ form.text_value.id_for_label }}" class="form-label">{{ metric_type.name }}</label>
+                                <textarea name="{{ form.text_value.name }}" id="{{ form.text_value.id_for_label }}" class="form-control" rows="5">{% if form.text_value.value %}{{ form.text_value.value }}{% endif %}</textarea>
+                                {% if form.text_value.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.text_value.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <!-- Value field for numeric types -->
+                            <div class="mb-3">
+                                <label for="{{ form.value.id_for_label }}" class="form-label">{{ metric_type.name }}</label>
+                                <input type="number" name="{{ form.value.name }}" id="{{ form.value.id_for_label }}" class="form-control" step="0.01" {% if form.value.value %}value="{{ form.value.value }}"{% endif %} required>
+                                {% if form.value.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.value.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text text-muted">
+                                    {% if metric_type.data_type == 'CURRENCY' %}Enter the amount in the base currency{% endif %}
+                                    {% if metric_type.data_type == 'PERCENTAGE' %}Enter the percentage value (e.g. 10 for 10%){% endif %}
+                                    {% if metric_type.data_type == 'NUMBER' %}Enter the numeric value{% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Date field -->
+                        <div class="mb-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                            <input type="date" name="{{ form.date.name }}" id="{{ form.date.id_for_label }}" class="form-control" {% if form.date.value %}value="{{ form.date.value|date:'Y-m-d' }}"{% endif %} required>
+                            {% if form.date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.date.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">When was this metric value observed or calculated?</div>
+                        </div>
+                        
+                        <!-- Notes field -->
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            <textarea name="{{ form.notes.name }}" id="{{ form.notes.id_for_label }}" class="form-control" rows="3">{% if form.notes.value %}{{ form.notes.value }}{% endif %}</textarea>
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">Optional: Add any notes about this metric value</div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Value
+                            </button>
+                            {% if back_url %}
+                                <a href="{{ back_url }}" class="btn btn-secondary">
+                                    <i class="bi bi-x"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'metrics:position_metrics' portfolio.portfolio_id position.position_id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

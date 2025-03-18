@@ -11,47 +11,19 @@ from django.http import Http404
 
 @login_required
 def metric_type_create(request):
-    if request.method == 'POST':
-        form = MetricTypeForm(request.POST)
-        if form.is_valid():
-            metric_type = form.save(commit=False)
-            metric_type.is_system = False  # User-created metrics are not system metrics
-            metric_type.save()
-            messages.success(request, 'Metric type created successfully!')
-            return redirect('portfolio:portfolio_list')
-    else:
-        form = MetricTypeForm()
-    
-    return render(request, 'metrics/metric_type_form.html', {
-        'form': form,
-        'title': 'Create Metric Type',
-        'submit_text': 'Create'
-    })
+    """
+    Redirects to the user_metrics app for custom metric type creation
+    """
+    messages.info(request, "Custom metrics are now managed in the User Defined Metrics section.")
+    return redirect('user_metrics:create')
 
 @login_required
 def metric_type_edit(request, metric_id):
-    metric_type = get_object_or_404(MetricType, metric_id=metric_id)
-    
-    # Don't allow editing of system metrics
-    if metric_type.is_system:
-        messages.error(request, 'System metrics cannot be edited.')
-        return redirect('portfolio:portfolio_list')
-    
-    if request.method == 'POST':
-        form = MetricTypeForm(request.POST, instance=metric_type)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Metric type updated successfully!')
-            return redirect('portfolio:portfolio_list')
-    else:
-        form = MetricTypeForm(instance=metric_type)
-    
-    return render(request, 'metrics/metric_type_form.html', {
-        'form': form,
-        'metric_type': metric_type,
-        'title': 'Edit Metric Type',
-        'submit_text': 'Update'
-    })
+    """
+    Redirects to the user_metrics app for custom metric type editing
+    """
+    messages.info(request, "Custom metrics are now managed in the User Defined Metrics section.")
+    return redirect('user_metrics:list')
 
 @login_required
 def position_metrics(request, portfolio_id, position_id):
@@ -220,6 +192,11 @@ def metric_value_edit(request, portfolio_id, position_id=None, value_id=None):
     position = None
     if position_id:
         position = get_object_or_404(Position, position_id=position_id, portfolio=portfolio)
+    
+    # If position_id is None but value_id is provided as positional arg
+    if position_id is not None and value_id is None:
+        value_id = position_id  # The second arg is actually the value_id
+        position_id = None
     
     # Get the metric value based on scope
     transaction = None
@@ -552,11 +529,11 @@ def portfolio_metrics(request, portfolio_id):
                 )
                 metrics_by_type[metric] = [computed_value]
         else:
-            # Get stored values
+            # Get stored values - use explicit ordering to ensure we get the latest
             stored_values = MetricValue.objects.filter(
                 portfolio=portfolio,
                 metric_type=metric
-            ).order_by('-date')
+            ).order_by('-date', '-created_at')  # Explicit ordering by both date and created_at
             
             # Always include the metric, even if it has no values
             if stored_values.exists():
@@ -597,7 +574,7 @@ def get_portfolio_metrics(portfolio):
             latest_metric = MetricValue.objects.filter(
                 portfolio=portfolio,
                 metric_type=metric_type
-            ).order_by('-date', '-created_at').first()
+            ).order_by('-date', '-created_at').first()  # Ensure ordering by both date and created_at
             
             if not latest_metric:
                 latest_metric = MetricValue(
@@ -632,3 +609,11 @@ def get_specific_metric(position, metric_name):
         ).order_by('-date').first()
     except Exception:
         return None
+
+@login_required
+def create_metric(request):
+    """
+    Redirects to the user_metrics app for custom metric creation
+    """
+    messages.info(request, "Custom metrics are now managed in the User Defined Metrics section.")
+    return redirect('user_metrics:create')

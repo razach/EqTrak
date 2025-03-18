@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load user_metrics_tags %}
 
 {% block title %}{{ metric_type.name }} History - {% if position %}{{ position.ticker }}{% else %}{{ portfolio.name }}{% endif %} - EqTrak{% endblock %}
 
@@ -34,22 +36,46 @@
             </p>
         </div>
         <div>
+            {% is_user_defined_metric metric_type as is_user_metric %}
+            {% get_user_metric metric_type as user_metric %}
+            
             {% if not metric_type.is_computed %}
-                {% if metric_type.scope_type == 'TRANSACTION' and transaction %}
-                    <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}&transaction_id={{ transaction.transaction_id }}" 
-                       class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Add New Value
-                    </a>
-                {% elif metric_type.scope_type == 'POSITION' and position %}
-                    <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}" 
-                       class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Add New Value
-                    </a>
+                {% if is_user_metric %}
+                    <!-- User-defined metric add value button -->
+                    {% if metric_type.scope_type == 'TRANSACTION' and transaction %}
+                        <a href="{% get_add_value_url user_metric portfolio position transaction %}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% elif metric_type.scope_type == 'POSITION' and position %}
+                        <a href="{% get_add_value_url user_metric portfolio position %}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% else %}
+                        <a href="{% get_add_value_url user_metric portfolio %}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% endif %}
                 {% else %}
-                    <a href="{% url 'metrics:portfolio_metric_value_create' portfolio.portfolio_id %}?metric_type={{ metric_type.metric_id }}" 
-                       class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Add New Value
-                    </a>
+                    <!-- System metric add value button -->
+                    {% if metric_type.scope_type == 'TRANSACTION' and transaction %}
+                        <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}&transaction_id={{ transaction.transaction_id }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% elif metric_type.scope_type == 'POSITION' and position %}
+                        <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% else %}
+                        <a href="{% url 'metrics:portfolio_metric_value_create' portfolio.portfolio_id %}?metric_type={{ metric_type.metric_id }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Add New Value
+                        </a>
+                    {% endif %}
                 {% endif %}
             {% endif %}
         </div>
@@ -78,7 +104,7 @@
                         <tbody>
                             {% for value in values %}
                                 <tr>
-                                    <td>{{ value.date|date:"Y-m-d" }}</td>
+                                    <td>{{ value.date }}</td>
                                     {% if metric_type.data_type == 'MEMO' %}
                                         <td>
                                             <pre class="mb-0" style="white-space: pre-wrap;">{{ value.text_value }}</pre>
@@ -102,16 +128,27 @@
                                     {% endif %}
                                     <td>
                                         {% if not metric_type.is_computed %}
-                                            {% if metric_type.scope_type == 'PORTFOLIO' %}
-                                                <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id value.value_id %}" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-pencil"></i> Edit
-                                                </a>
+                                            {% if is_user_metric %}
+                                                <!-- This will be handled differently for user metrics in the future -->
+                                                {% if position %}
+                                                    <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id position.position_id value.value_id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id value.value_id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                {% endif %}
                                             {% else %}
-                                                <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id position.position_id value.value_id %}" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-pencil"></i> Edit
-                                                </a>
+                                                {% if position %}
+                                                    <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id position.position_id value.value_id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'metrics:metric_value_edit' portfolio.portfolio_id value.value_id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                {% endif %}
                                             {% endif %}
                                         {% else %}
                                             <span class="badge bg-secondary">Computed</span>

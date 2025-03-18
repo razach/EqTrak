@@ -1,99 +1,113 @@
 # EqTrak Documentation
 
-Welcome to the EqTrak documentation. This documentation provides comprehensive information about the application's design, implementation, and usage.
+Welcome to the EqTrak documentation. This document provides an overview of the project structure, features, and development guidelines.
 
-## Core Documentation
+## Table of Contents
 
-1. [Architecture](Architecture.md)
-   - Project structure
-   - App interactions
-   - Integration points
-   - Template organization
-   - URL structure
-   - Docker development setup
+- [Architecture](#architecture)
+- [Design](#design)
+- [Data Model](#data-model)
+- [Application Modules](#application-modules)
+- [Templates](#templates)
+- [App Toggles](#app-toggles)
+- [Development Tools](#development-tools)
+- [Test Users](#test-users)
+- [TODO List](#todo-list)
 
-2. [Design Document](Design%20Document.md)
-   - Overview of the application
-   - Key features and functionalities
-   - System architecture
-   - User interface design
+## Architecture
 
-3. [Data Model](Data%20Model.md)
-   - Database schema
-   - Table relationships
-   - Field descriptions
-   - Data types and constraints
+See [Architecture.md](Architecture.md) for a detailed description of the application architecture.
 
-4. [Templates](templates.md)
-   - Template organization
-   - Component structure
-   - Usage guidelines
-   - Styling conventions
+## Design
 
-5. [Market Data Controls](Market%20Data%20Controls.md)
-   - Market data toggle feature
-   - Usage and functionality
-   - Technical details
-   - Admin controls
+See [Design Document.md](Design%20Document.md) for information about the application design, features, and user interface.
 
-## Development Setup
+## Data Model
 
-### Using Docker for Local Development
-1. Prerequisites:
-   - Docker
+See [Data Model.md](Data%20Model.md) for details about the database schema, models, and relationships.
 
-2. Quick Start with Docker:
-   ```bash
-   # Clone the repository
-   git clone [repository-url]
-   cd EqTrak
+## Application Modules
 
-   # Build the Docker image
-   docker build -t eqtrak-dev .
-   
-   # Start the development environment with volume mapping
-   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 eqtrak-dev
-   ```
+EqTrak is built with a modular architecture, where functionality is separated into distinct Django apps:
 
-3. Access:
-   - Application: http://localhost:8000
-   - Admin Panel: http://localhost:8000/admin
+### Core Modules
 
-### Key Docker Features
-- **Volume Mapping**: Local code is mounted into the container, enabling real-time code editing
-- **Isolated Environment**: Consistent development environment across different machines
-- **Simplified Setup**: Single Dockerfile without the overhead of docker-compose
-- **Auto-reload**: Code changes are detected and the server reloads automatically
+- **Portfolio**: Core portfolio tracking functionality
+- **Metrics**: System-defined metrics and calculations
+- **Users**: User management and settings
 
-### Traditional Setup
-See [Architecture](Architecture.md#development-setup) for traditional setup instructions.
+### Extension Modules
 
-## Development Roadmap
+- **User Metrics**: User-defined custom metrics
+- **Market Data**: External market data integration
 
-For a detailed list of upcoming tasks and planned features, see the [TODO document](TODO.md) which includes:
+## Module-Specific Documentation
 
-- Market Data Integration tasks
-- UI Enhancements
-- Data Management improvements
-- Performance Optimization tasks
+Each module has its own README file with detailed information:
 
-We are actively working on integrating real-time market data functionality. Check the TODO document for specific implementation plans.
+- [Metrics Module](../EqTrak/metrics/README.md) - Core metrics functionality
+- [User Metrics Module](../EqTrak/user_metrics/README.md) - User-defined metrics functionality
 
-## Development Resources
+## Templates
 
-- [Test Users](test_users.md) (Development environment only)
+See [templates.md](templates.md) for information about template structure and organization.
 
-## Quick Links
+## App Toggles
 
-### For Developers
-- [Project Structure](Architecture.md#project-structure)
-- [App Interactions](Architecture.md#app-interactions)
-- [Data Model Tables](Data%20Model.md#core-data-model)
-- [Key Features](Design%20Document.md#key-features)
-- [Docker Setup](Architecture.md#docker-development)
+EqTrak supports toggling specific functionality on and off. See [APP_TOGGLES.md](APP_TOGGLES.md) for details on configuring toggleable features.
 
-### For Template Development
-- [Template Structure](Architecture.md#template-structure)
-- [Template Best Practices](templates.md#best-practices)
-- [Context Requirements](templates.md#context-requirements)
-- [Styling Guidelines](templates.md#styling)
+## Market Data Controls
+
+Information about controlling market data integration can be found in [Market Data Controls.md](Market%20Data%20Controls.md).
+
+## Development Tools
+
+### Database Reset Scripts
+
+EqTrak includes scripts to help with development database management:
+
+#### Basic Database Reset (`reset_db.sh`)
+
+This script resets the database to a clean state:
+- Deletes the SQLite database file
+- Removes all migration files (keeping `__init__.py`)
+- Creates fresh migrations
+- Applies migrations
+- Creates a superuser
+
+Usage:
+```bash
+# Make the script executable
+chmod +x reset_db.sh
+
+# Run the script
+./reset_db.sh
+```
+
+#### Reset with Test Users (`reset_db_with_testusers.sh`)
+
+This script resets the database and automatically creates test users:
+- Performs all the actions of the basic reset
+- Creates test users defined in [test_users.md](test_users.md)
+- Gives you the option to create a superuser
+
+Usage:
+```bash
+# Make the script executable
+chmod +x reset_db_with_testusers.sh
+
+# Run the script
+./reset_db_with_testusers.sh
+```
+
+Test users created:
+- Username: test_user1, Password: TempPass123!@#
+- Username: test_user2, Password: TempPass456!@#
+
+## Test Users
+
+See [test_users.md](test_users.md) for test user credentials and related information.
+
+## TODO List
+
+See [TODO.md](TODO.md) for a list of planned features and improvements.

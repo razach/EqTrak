@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ title }}</h2>
+                    <p class="text-muted mb-0">Create a custom metric to track in your portfolios</p>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden fields or error messages -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Form fields -->
+                        <!-- Name field -->
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
+                            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control" {% if form.name.value %}value="{{ form.name.value }}"{% endif %} required>
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">Enter a name for your custom metric</div>
+                        </div>
+
+                        <!-- Description field -->
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="form-control" rows="3">{% if form.description.value %}{{ form.description.value }}{% endif %}</textarea>
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">{{ form.description.help_text }}</div>
+                        </div>
+                        
+                        <!-- Data Type field -->
+                        <div class="mb-3">
+                            <label for="{{ form.data_type.id_for_label }}" class="form-label">Data Type</label>
+                            <select name="{{ form.data_type.name }}" id="{{ form.data_type.id_for_label }}" class="form-select" required>
+                                <option value="">Select data type...</option>
+                                {% for value, text in form.data_type.field.choices %}
+                                    <option value="{{ value }}" {% if form.data_type.value == value %}selected{% endif %}>{{ text }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.data_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.data_type.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">{{ form.data_type.help_text }}</div>
+                        </div>
+
+                        <!-- Scope Type field -->
+                        <div class="mb-3">
+                            <label for="{{ form.scope_type.id_for_label }}" class="form-label">Applies To</label>
+                            <select name="{{ form.scope_type.name }}" id="{{ form.scope_type.id_for_label }}" class="form-select" required>
+                                <option value="">Select where this metric applies...</option>
+                                {% for value, text in form.scope_type.field.choices %}
+                                    <option value="{{ value }}" {% if form.scope_type.value == value %}selected{% endif %}>{{ text }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.scope_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.scope_type.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">{{ form.scope_type.help_text }}</div>
+                        </div>
+
+                        <!-- Tags field -->
+                        <div class="mb-3">
+                            <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                            <input type="text" name="{{ form.tags.name }}" id="{{ form.tags.id_for_label }}" class="form-control" {% if form.tags.value %}value="{{ form.tags.value }}"{% endif %}>
+                            {% if form.tags.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.tags.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">{{ form.tags.help_text }}</div>
+                        </div>
+
+                        <!-- Is Active field -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" class="form-check-input" {% if form.is_active.value %}checked{% endif %} checked>
+                            <label for="{{ form.is_active.id_for_label }}" class="form-check-label">Active</label>
+                            {% if form.is_active.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.is_active.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text text-muted">Enable this metric for use in your portfolios</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <span>After creating the metric, you'll be able to add values to it from your portfolio, position, or transaction pages.</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Metric
+                            </button>
+                            <a href="{% url 'user_metrics:list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

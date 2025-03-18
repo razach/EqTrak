@@ -1,50 +1,112 @@
 <!-- Metric Types Section -->
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Metrics</h2>
-        <a href="{% url 'metrics:metric_type_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus"></i> Define New Metric
-        </a>
-    </div>
+{% load user_metrics_tags %}
 
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for scope_type, metrics in metrics_by_type.items %}
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">{{ scope_type }} Metrics</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            {% for metric in metrics %}
-                                <li class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="fw-medium">{{ metric.name }}</span>
-                                            {% if metric.is_computed %}
-                                                <span class="badge bg-secondary ms-2">
-                                                    <i class="bi bi-calculator"></i>
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
-                                    </div>
-                                    {% if metric.tags %}
-                                        <div class="mt-1">
-                                            {% for tag in metric.tags.split %}
-                                                <span class="badge bg-light text-dark me-1">{{ tag }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if metric.description %}
-                                        <small class="text-muted d-block mt-1">{{ metric.description }}</small>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
+<div class="row">
+    <!-- Portfolio Metrics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Portfolio Metrics</h5>
             </div>
-        {% endfor %}
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for metric in portfolio_metrics %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                    {{ metric.name }}
+                                </span>
+                                {% if metric.is_computed %}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="bi bi-calculator"></i>
+                                    </span>
+                                {% endif %}
+                                {% is_user_defined_metric metric as is_user_metric %}
+                                {% if is_user_metric %}
+                                    <span class="badge bg-info ms-1">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No portfolio metrics available</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Position Metrics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Position Metrics</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for metric in position_metrics %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                    {{ metric.name }}
+                                </span>
+                                {% if metric.is_computed %}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="bi bi-calculator"></i>
+                                    </span>
+                                {% endif %}
+                                {% is_user_defined_metric metric as is_user_metric %}
+                                {% if is_user_metric %}
+                                    <span class="badge bg-info ms-1">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No position metrics available</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Metrics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Transaction Metrics</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for metric in transaction_metrics %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                    {{ metric.name }}
+                                </span>
+                                {% if metric.is_computed %}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="bi bi-calculator"></i>
+                                    </span>
+                                {% endif %}
+                                {% is_user_defined_metric metric as is_user_metric %}
+                                {% if is_user_metric %}
+                                    <span class="badge bg-info ms-1">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No transaction metrics available</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     </div>
 </div> 

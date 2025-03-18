@@ -45,11 +45,14 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'corsheaders',
+    'crispy_forms',
+    'crispy_bootstrap5',
     # Local apps will go here
     'portfolio',
     'users',
     'metrics',
     'market_data',
+    'user_metrics',
 ]
 
 MIDDLEWARE = [
@@ -77,6 +80,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'metrics.context_processors.metric_types',
+                'user_metrics.context_processors.user_metrics_enabled',
             ],
         },
     },
@@ -190,6 +194,10 @@ MARKET_DATA_PROVIDER = os.getenv('MARKET_DATA_PROVIDER', 'yahoo')  # Default dat
 # Optional price data settings
 MARKET_DATA_REFRESH_INTERVAL = 24  # Hours between auto-refresh
 MARKET_DATA_PRICE_STALENESS = 3  # Days before prices considered stale
+
+# Crispy Forms settings
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Encryption settings for sensitive data
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')  # Should be a URL-safe base64-encoded 32-byte key

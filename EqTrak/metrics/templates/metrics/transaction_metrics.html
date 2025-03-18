@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load user_metrics_tags %}
 
-{% block title %}Transaction Metrics - {{ position.ticker }} - EqTrak{% endblock %}
+{% block title %}Transaction Metrics - {{ transaction.transaction_id }} - EqTrak{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -10,40 +12,22 @@
         </a>
     </div>
 
-    <h1>{{ position.ticker }} - Transaction Metrics</h1>
-    
-    <!-- Transaction Summary Card -->
+    <h1>Transaction Metrics</h1>
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white py-3">
-            <h5 class="card-title mb-0 fw-bold">Transaction Details</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <p class="mb-1 text-muted">Type</p>
-                    <p class="fw-bold">{{ transaction.get_transaction_type_display }}</p>
-                </div>
-                <div class="col-md-3">
-                    <p class="mb-1 text-muted">Quantity</p>
-                    <p class="fw-bold">{{ transaction.quantity }}</p>
-                </div>
-                <div class="col-md-3">
-                    <p class="mb-1 text-muted">Price</p>
-                    <p class="fw-bold">{{ transaction.currency }} {{ transaction.price }}</p>
-                </div>
-                <div class="col-md-3">
-                    <p class="mb-1 text-muted">Date</p>
-                    <p class="fw-bold">{{ transaction.date|date:"Y-m-d" }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0 fw-bold">{{ position.ticker }} - {{ transaction.get_transaction_type_display }}</h5>
+                    <p class="text-muted mb-0 small">{{ transaction.date|date:"F d, Y" }} - {{ transaction.quantity }} shares @ {{ transaction.price }}</p>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Metrics Card -->
+    
     <div class="card shadow-sm">
         <div class="card-header bg-white py-3">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0 fw-bold">Transaction Metrics Summary</h5>
+                <h5 class="card-title mb-0 fw-bold">Transaction Metrics</h5>
             </div>
         </div>
         <div class="card-body">
@@ -64,12 +48,18 @@
                         <tbody>
                             {% for metric_type, values in metrics_by_type.items %}
                                 {% with value=values|first %}
+                                    {% is_user_defined_metric metric_type as is_user_metric %}
+                                    {% get_user_metric metric_type as user_metric %}
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 {% if metric_type.is_computed %}
                                                     <span class="badge bg-secondary me-2">
                                                         <i class="bi bi-calculator"></i>
+                                                    </span>
+                                                {% elif is_user_metric %}
+                                                    <span class="badge bg-info me-2">
+                                                        <i class="bi bi-person"></i>
                                                     </span>
                                                 {% endif %}
                                                 {{ metric_type.name }}
@@ -117,15 +107,30 @@
                                         <td>
                                             {% if not metric_type.is_computed %}
                                                 <div class="btn-group">
-                                                    <a href="{% url 'metrics:position_metric_history' portfolio.portfolio_id position.position_id metric_type.metric_id %}?transaction_id={{ transaction.transaction_id }}" 
-                                                       class="btn btn-sm btn-outline-secondary">
-                                                        <i class="bi bi-clock-history"></i> History
-                                                    </a>
-                                                    {% if metric_type.data_type == 'MEMO' %}
-                                                        <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}&transaction_id={{ transaction.transaction_id }}" 
-                                                           class="btn btn-sm btn-outline-success">
-                                                            <i class="bi bi-plus"></i> Add Entry
+                                                    {% if is_user_metric %}
+                                                        <!-- User-defined metric actions -->
+                                                        <a href="{% url 'metrics:position_metric_history' portfolio.portfolio_id position.position_id metric_type.metric_id %}?transaction_id={{ transaction.transaction_id }}" 
+                                                           class="btn btn-sm btn-outline-secondary">
+                                                            <i class="bi bi-clock-history"></i> History
                                                         </a>
+                                                        {% if metric_type.data_type == 'MEMO' or not value.value %}
+                                                            <a href="{% get_add_value_url user_metric portfolio position transaction %}" 
+                                                               class="btn btn-sm btn-outline-success">
+                                                                <i class="bi bi-plus"></i> Add Value
+                                                            </a>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <!-- System metric actions -->
+                                                        <a href="{% url 'metrics:position_metric_history' portfolio.portfolio_id position.position_id metric_type.metric_id %}?transaction_id={{ transaction.transaction_id }}" 
+                                                           class="btn btn-sm btn-outline-secondary">
+                                                            <i class="bi bi-clock-history"></i> History
+                                                        </a>
+                                                        {% if metric_type.data_type == 'MEMO' %}
+                                                            <a href="{% url 'metrics:metric_value_create' portfolio.portfolio_id position.position_id %}?metric_type={{ metric_type.metric_id }}&transaction_id={{ transaction.transaction_id }}" 
+                                                               class="btn btn-sm btn-outline-success">
+                                                                <i class="bi bi-plus"></i> Add Entry
+                                                            </a>
+                                                        {% endif %}
                                                     {% endif %}
                                                 </div>
                                             {% else %}
