@@ -1,93 +1,76 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}App Settings{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Application Settings</h4>
+    <h1>{{ page_title }}</h1>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>User Preferences</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <h6>Market Data Settings</h6>
+                <hr>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        {{ form.market_data_enabled }}
+                        <label class="form-check-label" for="{{ form.market_data_enabled.id_for_label }}">
+                            {{ form.market_data_enabled.label }}
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">{{ form.market_data_enabled.help_text }}</small>
                 </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        {% if messages %}
-                            <div class="alert alert-success">
-                                {% for message in messages %}
-                                    {{ message }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        
-                        <div class="form-group mb-4">
-                            <h5>Feature Toggles</h5>
-                            <p class="text-muted">Enable or disable specific application features according to your preferences.</p>
-                            
-                            <div class="form-check form-switch mb-3">
-                                <input type="checkbox" class="form-check-input" id="id_market_data_enabled" name="market_data_enabled" 
-                                    {% if form.market_data_enabled.value %}checked{% endif %}>
-                                <label class="form-check-label" for="id_market_data_enabled">
-                                    Enable Market Data
-                                </label>
-                                <small class="form-text text-muted">
-                                    When enabled, the system will fetch and update market data for your securities.
-                                </small>
-                            </div>
-                            
-                            <!-- Add more toggles here as needed -->
-                        </div>
-                        
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary">Save Settings</button>
-                            <a href="{% url 'portfolio:portfolio_list' %}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
+                
+                <div class="form-group mb-3">
+                    <label for="{{ form.market_data_provider.id_for_label }}">{{ form.market_data_provider.label }}</label>
+                    {{ form.market_data_provider }}
+                    <small class="form-text text-muted">{{ form.market_data_provider.help_text }}</small>
                 </div>
-            </div>
+                
+                <div id="api-key-section" class="form-group mb-3 {% if form.market_data_provider.value != 'alpha_vantage' %}d-none{% endif %}">
+                    <label for="{{ form.alpha_vantage_api_key.id_for_label }}">{{ form.alpha_vantage_api_key.label }}</label>
+                    {{ form.alpha_vantage_api_key }}
+                    <small class="form-text text-muted">Required for Alpha Vantage data provider.</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
         </div>
     </div>
 </div>
-{% endblock %}
 
 {% block extra_js %}
 <script>
-    // Optional JavaScript for enhancing the UI (e.g., real-time toggle updates)
     document.addEventListener('DOMContentLoaded', function() {
-        // Example: Add AJAX functionality for toggle switches if needed
-        const marketDataToggle = document.getElementById('id_market_data_enabled');
+        // Dynamic form behavior
+        const providerSelect = document.getElementById('{{ form.market_data_provider.id_for_label }}');
+        const apiKeySection = document.getElementById('api-key-section');
         
-        // Uncomment to enable AJAX toggling without form submission
-        /*
-        marketDataToggle.addEventListener('change', function() {
-            fetch('{% url "users:toggle_market_data" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: 'enabled=' + this.checked
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-success mt-2';
-                    alert.textContent = 'Setting updated successfully';
-                    this.parentNode.appendChild(alert);
-                    
-                    // Remove alert after 3 seconds
-                    setTimeout(() => {
-                        alert.remove();
-                    }, 3000);
-                }
-            });
+        providerSelect.addEventListener('change', function() {
+            if (this.value === 'alpha_vantage') {
+                apiKeySection.classList.remove('d-none');
+            } else {
+                apiKeySection.classList.add('d-none');
+            }
         });
-        */
     });
 </script>
-{% endblock %} 
+{% endblock %}
+{% endblock %}

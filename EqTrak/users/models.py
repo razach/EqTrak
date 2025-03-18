@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from .fields import EncryptedCharField
+
 class UserSettings(models.Model):
     """
     Stores user-specific settings and app toggle preferences
@@ -14,6 +16,30 @@ class UserSettings(models.Model):
         default=True,
         verbose_name="Enable Market Data",
         help_text="Enable or disable market data updates for your account"
+    )
+    
+    # Market data provider preference
+    PROVIDER_CHOICES = [
+        ('system', 'System Default'),
+        ('yahoo', 'Yahoo Finance'),
+        ('alpha_vantage', 'Alpha Vantage'),
+        # Add more providers as they become available
+    ]
+    
+    market_data_provider = models.CharField(
+        max_length=20,
+        choices=PROVIDER_CHOICES,
+        default='system',
+        verbose_name="Market Data Provider",
+        help_text="Select which market data provider to use"
+    )
+    
+    # API Keys for providers that require authentication (encrypted)
+    alpha_vantage_api_key = EncryptedCharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        verbose_name="Alpha Vantage API Key"
     )
     
     # Add other app toggles as needed

@@ -96,7 +96,7 @@ class MarketDataService:
             return security
         except Security.DoesNotExist:
             # Create new security
-            provider = get_provider()
+            provider = get_provider(user=user)  # Pass user for provider preference
             security_info = provider.get_security_info(symbol)
             
             with transaction.atomic():
@@ -116,13 +116,14 @@ class MarketDataService:
             
     @staticmethod
     @check_market_data_access
-    def get_latest_price(security: Union[Security, str], user=None) -> Dict[str, Any]:
+    def get_latest_price(security: Union[Security, str], user=None, force_refresh=False) -> Dict[str, Any]:
         """
         Get the latest price data for a security.
         
         Args:
             security: Security object or ticker symbol
             user: Optional user context for permissions
+            force_refresh: Force API refresh even if we have today's data
             
         Returns:
             Dict containing price data
@@ -130,8 +131,55 @@ class MarketDataService:
         if isinstance(security, str):
             security = MarketDataService.get_or_create_security(security, user=user)
             
-        provider = get_provider()
+        # Check if we already have today's price data in the database
+        today = date.today()
+        if not force_refresh:
+            try:
+                # Look for price data from today
+                price_data = PriceData.objects.filter(
+                    security=security,
+                    date=today
+                ).first()
+                
+                if price_data:
+                    # We have today's data, use it instead of making an API call
+                    logger.debug(f"Using cached price data for {security.symbol} from {today}")
+                    return {
+                        'symbol': security.symbol,
+                        'date': today.isoformat(),
+                        'price': price_data.close,
+                        'change': price_data.close - price_data.open if price_data.open else 0,
+                        'change_percent': ((price_data.close - price_data.open) / price_data.open * 100) 
+                                         if price_data.open and price_data.open != 0 else 0,
+                        'volume': price_data.volume,
+                        'timestamp': timezone.now().isoformat()
+                    }
+            except Exception as e:
+                logger.debug(f"Error fetching cached price data: {e}")
+                # Continue to API call if there's an error with cached data
+        
+        # If we got here, we either don't have today's data or force_refresh is True
+        provider = get_provider(user=user)  # Pass user for provider preference
         price_data = provider.get_latest_price(security.symbol)
+        
+        # Store the new price data in the database
+        try:
+            price_date = date.fromisoformat(price_data['date'])
+            PriceData.objects.update_or_create(
+                security=security,
+                date=price_date,
+                defaults={
+                    'open': price_data['open'],
+                    'high': price_data['high'],
+                    'low': price_data['low'],
+                    'close': price_data['close'],
+                    'adj_close': price_data.get('adj_close', price_data['close']),
+                    'volume': price_data.get('volume', 0),
+                    'source': provider.__class__.__name__
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to store price data for {security.symbol}: {e}")
         
         # Convert price data to a standardized format
         result = {
@@ -141,7 +189,7 @@ class MarketDataService:
             'change': price_data.get('change', None),
             'change_percent': price_data.get('change_percent', None),
             'volume': price_data.get('volume', None),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': timezone.now().isoformat()
         }
         
         return result
@@ -180,7 +228,7 @@ class MarketDataService:
             # Default to 1 year history
             start_date = end_date - timedelta(days=365)
             
-        provider = get_provider()
+        provider = get_provider(user=user)  # Pass user for provider preference
         price_data_list = provider.get_historical_prices(
             security.symbol,
             start_date=start_date,
@@ -232,7 +280,7 @@ class MarketDataService:
             ]
         
         # If no local results, try provider search
-        provider = get_provider()
+        provider = get_provider(user=user)  # Pass user for provider preference
         return provider.search_securities(query)
     
     @staticmethod
@@ -282,7 +330,7 @@ class MarketDataService:
             
         try:
             # Refresh security info
-            provider = get_provider()
+            provider = get_provider(user=user)  # Pass user for provider preference
             security_info = provider.get_security_info(security.symbol)
             
             # Update security record
@@ -292,23 +340,8 @@ class MarketDataService:
             security.currency = security_info['currency']
             security.save()
             
-            # Get latest price data
-            latest_price = provider.get_latest_price(security.symbol)
-            price_date = date.fromisoformat(latest_price['date'])
-            
-            PriceData.objects.update_or_create(
-                security=security,
-                date=price_date,
-                defaults={
-                    'open': latest_price['open'],
-                    'high': latest_price['high'],
-                    'low': latest_price['low'],
-                    'close': latest_price['close'],
-                    'adj_close': latest_price['adj_close'],
-                    'volume': latest_price['volume'],
-                    'source': provider.__class__.__name__
-                }
-            )
+            # Get latest price data with force_refresh=True to ensure we get fresh data
+            latest_price = MarketDataService.get_latest_price(security, user=user, force_refresh=True)
             
             return True
             
@@ -348,17 +381,27 @@ class MarketDataService:
             except ValueError as e:
                 logger.warning(f"Could not get latest price for {position.ticker}: {e}")
                 return None
-                
-            # Find "Market Price" metric
+            
+            # Find "Market Price" metric - using name field instead of code
+            # Based on the error message, 'code' field doesn't exist
             try:
+                # Try by name first
                 market_price_metric = MetricType.objects.get(
-                    code='MARKET_PRICE',
+                    name='Market Price',
                     scope_type='POSITION',
                     is_system=True
                 )
             except MetricType.DoesNotExist:
-                logger.error("MARKET_PRICE metric type not found")
-                return None
+                try:
+                    # If that fails, try by metric_id if that's what's being used
+                    market_price_metric = MetricType.objects.get(
+                        metric_id='MARKET_PRICE',
+                        scope_type='POSITION',
+                        is_system=True
+                    )
+                except MetricType.DoesNotExist:
+                    logger.error("Market Price metric type not found")
+                    return None
             
             # Create or update the metric value
             metric_value, created = MetricValue.objects.update_or_create(

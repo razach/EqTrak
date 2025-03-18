@@ -30,7 +30,7 @@ def settings_view(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Your settings have been updated.')
-            return redirect('portfolio:portfolio_list')
+            return redirect('users:settings')
     else:
         form = UserSettingsForm(instance=user_settings)
     
@@ -53,4 +53,49 @@ def toggle_market_data(request):
     return JsonResponse({
         'success': True,
         'market_data_enabled': user_settings.market_data_enabled
-    }) 
+    })
+
+@login_required
+@require_POST
+def update_market_data_provider(request):
+    """AJAX endpoint to update market data provider settings"""
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
+    
+    provider = request.POST.get('provider')
+    if provider and provider in dict(UserSettings.PROVIDER_CHOICES):
+        user_settings.market_data_provider = provider
+        user_settings.save()
+        
+        return JsonResponse({
+            'success': True,
+            'provider': user_settings.market_data_provider,
+            'provider_display': user_settings.get_market_data_provider_display()
+        })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid provider selection'
+    }, status=400)
+
+@login_required
+@require_POST
+def update_provider_api_key(request):
+    """Update API key for a specific provider"""
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
+    
+    provider = request.POST.get('provider')
+    api_key = request.POST.get('api_key', '')
+    
+    if provider == 'alpha_vantage':
+        user_settings.alpha_vantage_api_key = api_key
+        user_settings.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Alpha Vantage API key updated successfully'
+        })
+    # Add more providers as needed
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid provider specified'
+    }, status=400)

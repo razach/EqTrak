@@ -150,6 +150,17 @@ Tags allow users to organize metrics into custom categories (e.g., "Fundamental"
 |date|Date|Yes|Date the analytic is relevant|
 |calculated_at|Timestamp|Yes|Time when the analytic was calculated|
 
+### **UserSettings Table**
+
+| Field                  | Type           | Required | Description                                  |
+|------------------------|----------------|----------|----------------------------------------------|
+| user                   | ForeignKey     | Yes      | One-to-one relationship with User            |
+| market_data_enabled    | Boolean        | Yes      | Whether market data updates are enabled      |
+| market_data_provider   | String         | Yes      | Provider preference (system, yahoo, etc.)    |
+| alpha_vantage_api_key  | EncryptedChar  | No       | Encrypted API key for Alpha Vantage          |
+| created_at             | Timestamp      | Yes      | Settings creation time                       |
+| updated_at             | Timestamp      | Yes      | Last update time                             |
+
 ## Market Data Models
 
 ### **Security Table**
@@ -296,6 +307,28 @@ The application uses Django context processors to make certain data globally ava
        position=position
    ).order_by('-date', '-created_at')
    ```
+
+### User Settings Integration
+
+User settings provide control over app functionality and data providers:
+
+1. **Provider Selection**
+   - **Pattern**: User-specific market data provider selection
+   - **Implementation**: Each user can choose which provider to use
+   - **API Keys**: Securely stored encrypted API keys for providers that require them
+   - **Default Strategy**: Falls back to system default when user has no preference
+
+2. **Factory Pattern for Provider Selection**
+   - Provider factory considers both system settings and user preferences
+   - User API keys override system keys when available
+   - Transparent to service layer which provider is being used
+   - Implementation in `market_data/providers/factory.py`
+
+3. **User Interface**
+   - Settings page exposes provider selection to users
+   - API key fields dynamically shown/hidden based on selected provider
+   - Visual feedback on current provider selection
+   - Security through encryption of sensitive API keys
 
 ## Related Documentation
 - [Templates](templates.md) - Template structure and components

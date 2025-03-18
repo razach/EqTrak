@@ -189,7 +189,7 @@ LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
 
 # Market Data Provider configuration
-MARKET_DATA_PROVIDER = 'yahoo'  # Default data provider
+MARKET_DATA_PROVIDER = os.getenv('MARKET_DATA_PROVIDER', 'yahoo')  # Default data provider
 
 # Optional price data settings
 MARKET_DATA_REFRESH_INTERVAL = 24  # Hours between auto-refresh
@@ -198,3 +198,6 @@ MARKET_DATA_PRICE_STALENESS = 3  # Days before prices considered stale
 # Crispy Forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Encryption settings for sensitive data
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')  # Should be a URL-safe base64-encoded 32-byte key
