@@ -1,7 +1,15 @@
 #!/bin/bash
-# Script to reset the database with test users
+# Script to reset the database with test users and configuration fixtures
 
-echo "WARNING: This will delete your database and all migrations!"
+# Determine script location and set paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANAGE_PY="${SCRIPT_DIR}/manage.py"
+DB_PATH="${SCRIPT_DIR}/db.sqlite3"
+
+# Go to the project root directory
+cd "${SCRIPT_DIR}"
+
+echo "WARNING: This will delete your database!"
 echo "This should only be used in development environments."
 read -p "Are you sure you want to continue? (y/n): " confirm
 
@@ -12,17 +20,38 @@ fi
 
 # Delete the database
 echo "Deleting database..."
-rm -f db.sqlite3
+if [ -f "$DB_PATH" ]; then
+  rm -f "$DB_PATH"
+  echo "Database deleted successfully."
+else
+  echo "Database file not found at $DB_PATH. Creating a new one."
+fi
 
-# Create fresh migrations (but keep existing ones)
-echo "Creating fresh migrations if needed..."
-python manage.py makemigrations
+# Set environment variable to prevent auto-loading metrics during app initialization
+export SKIP_AUTO_METRICS_LOAD=1
+echo "Setting SKIP_AUTO_METRICS_LOAD=1 to prevent duplicate metrics loading"
 
 # Apply migrations
 echo "Applying migrations..."
-python manage.py migrate
+python "$MANAGE_PY" migrate
 
-echo "Test users created:"
+# Initialize app settings to ensure they're enabled by default
+echo "Initializing app settings..."
+python "$MANAGE_PY" init_app_settings
+
+# Clear any metrics that might have been created by migrations
+echo "Clearing existing metrics before loading fixtures..."
+python "$MANAGE_PY" clear_metrics --confirm
+
+# Load all metrics using the configure_metrics command with --sync flag
+echo "Loading metrics fixtures..."
+python "$MANAGE_PY" configure_metrics --load --sync
+echo "All metrics loaded successfully with sync option to prevent duplicates."
+
+# Load test users from fixtures
+echo "Creating test users..."
+python "$MANAGE_PY" load_test_users
+echo "Test users created successfully:"
 echo "- Username: test_user1, Password: TempPass123!@#"
 echo "- Username: test_user2, Password: TempPass456!@#"
 
@@ -31,8 +60,8 @@ read -p "Do you want to create a superuser? (y/n): " create_superuser
 
 if [ "$create_superuser" = "y" ]; then
   echo "Creating superuser..."
-  python manage.py createsuperuser
+  python "$MANAGE_PY" createsuperuser
 fi
 
 echo "Database reset completed successfully!"
-echo "You may now run the server with: python manage.py runserver" 
+echo "You may now run the server with: python $MANAGE_PY runserver" 

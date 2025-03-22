@@ -4,9 +4,24 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import uuid
+import os
 
 def create_system_metrics(apps, schema_editor):
+    """
+    Create initial system metrics.
+    Will be skipped if SKIP_AUTO_METRICS_LOAD environment variable is set.
+    """
+    # Skip if environment variable is set
+    if os.environ.get('SKIP_AUTO_METRICS_LOAD'):
+        print("Skipping system metrics creation in migration due to SKIP_AUTO_METRICS_LOAD")
+        return
+        
     MetricType = apps.get_model('metrics', 'MetricType')
+    
+    # Check if metrics already exist (from fixtures)
+    if MetricType.objects.exists():
+        print("Metrics already exist, skipping creation in migration")
+        return
     
     system_metrics = [
         # Position metrics
