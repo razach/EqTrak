@@ -1,0 +1,61 @@
+{% load performance_tags %}
+
+{% if is_performance_enabled %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-graph-up-arrow me-1"></i> Performance
+        </h5>
+        <a href="{% url 'performance:position' position.portfolio.portfolio_id position.position_id %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-graph-up"></i> Detailed Analysis
+        </a>
+    </div>
+    <div class="card-body">
+        {% calculate_position_performance position user as performance %}
+        
+        {% if performance %}
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="metric-box">
+                    <div class="metric-label">Cost Basis</div>
+                    <div class="metric-value">${{ performance.cost_basis|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-box">
+                    <div class="metric-label">Current Value</div>
+                    <div class="metric-value">${{ performance.current_value|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="metric-box">
+                    <div class="metric-label">Gain/Loss</div>
+                    <div class="metric-value">
+                        {% format_gain_loss performance.absolute_gain_loss include_percent=False %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-box">
+                    <div class="metric-label">Return</div>
+                    <div class="metric-value">
+                        {% format_gain_loss performance.percentage_gain_loss include_percent=True %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-muted small mt-3">
+            <i class="bi bi-info-circle me-1"></i> Last calculated: {{ performance.calculation_date|date:"M d, Y H:i" }}
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle me-1"></i> Performance data is not available for this position.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %} 

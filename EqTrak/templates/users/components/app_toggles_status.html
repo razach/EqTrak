@@ -52,6 +52,53 @@
                         </div>
                     </div>
                     
+                    <!-- Performance Module Toggle Status -->
+                    {% if 'performance' in INSTALLED_APPS %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                {% load performance_tags %}
+                                {% get_performance_system_setting as system_performance_enabled %}
+                                
+                                {% if not system_performance_enabled %}
+                                    <!-- System-wide disabled overrides user setting -->
+                                    <span class="badge bg-danger rounded-pill" title="Disabled by administrator">
+                                        <i class="bi bi-slash-circle-fill"></i>
+                                    </span>
+                                {% elif user.settings.performance_enabled %}
+                                    <span class="badge bg-success rounded-pill">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Performance Metrics</h6>
+                                <small class="text-muted">
+                                    {% if not system_performance_enabled %}
+                                        <span class="text-danger">Feature disabled by administrator</span>
+                                    {% elif user.settings.performance_enabled %}
+                                        Metrics enabled
+                                    {% else %}
+                                        Metrics disabled
+                                    {% endif %}
+                                </small>
+                                
+                                {% if not system_performance_enabled and user.settings.performance_enabled %}
+                                <div class="mt-1">
+                                    <small class="text-muted fst-italic">
+                                        Your preference: Enabled, but overridden by system settings
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Add more toggle statuses here as they are implemented -->
                     
                 </div>

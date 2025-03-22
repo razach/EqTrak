@@ -1,6 +1,64 @@
 # EqTrak Documentation
 
-Welcome to the EqTrak documentation. This document provides an overview of the project structure, features, and development guidelines.
+Welcome to the EqTrak documentation. This resource contains information about the application's architecture, features, and development guidelines.
+
+## Core Documentation
+
+- [Architecture](Architecture.md): System architecture and design principles
+- [Data Model](Data%20Model.md): Database schema and relationships
+- [Design Document](Design%20Document.md): Overall design philosophy and decisions
+- [Development Guide](DEVELOPMENT.md): Development workflow and tools
+- [Development Setup](DEVELOPMENT_SETUP.md): Setting up the development environment
+- [Changelog](CHANGELOG.md): History of changes and recent fixes
+
+## Feature Documentation
+
+- [Performance Module](PERFORMANCE_MODULE.md): Performance tracking and calculations
+- [App Toggles](APP_TOGGLES.md): Feature flag system
+- [Market Data Controls](Market%20Data%20Controls.md): Market data integration
+- [Templates](templates.md): Template structure and usage
+
+## Development Practices
+
+- [Fixture-Based Configuration](fixture_based_configuration.md): Our approach to application configuration
+- [Test Users](test_users.md): Test user management for development
+
+## Project Management
+
+- [TODO](TODO.md): Current development tasks and roadmap
+
+## Recent Improvements
+
+The latest version (0.2.0) includes important fixes to the Performance module:
+
+- Fixed UUID handling in performance metrics using `CharField` instead of integer field
+- Corrected primary key references in calculation services
+- Improved template handling for performance metrics display
+- Enhanced error handling and troubleshooting
+
+For complete details of recent changes, see the [Changelog](CHANGELOG.md).
+
+## Key Development Approaches
+
+### Fixture-Based Configuration
+
+EqTrak uses a fixture-based approach for application configuration:
+
+- **Schema in Migrations**: Only structural database changes in migrations
+- **Data in Fixtures**: Configuration data stored in JSON fixtures
+- **Automatic Loading**: Configuration loaded at application startup
+
+For more information, see [Fixture-Based Configuration](fixture_based_configuration.md).
+
+### Module Separation
+
+Features are organized into separate Django apps for:
+
+- Clean separation of concerns
+- Ability to enable/disable features
+- Independent development and testing
+
+See [Architecture](Architecture.md) for details on our modular approach.
 
 ## Table of Contents
 
@@ -40,6 +98,7 @@ EqTrak is built with a modular architecture, where functionality is separated in
 
 - **User Metrics**: User-defined custom metrics
 - **Market Data**: External market data integration
+- **Performance**: Gain/loss calculations and tracking
 
 ## Module-Specific Documentation
 
@@ -47,6 +106,7 @@ Each module has its own README file with detailed information:
 
 - [Metrics Module](../EqTrak/metrics/README.md) - Core metrics functionality
 - [User Metrics Module](../EqTrak/user_metrics/README.md) - User-defined metrics functionality
+- [Performance Module](../EqTrak/performance/README.md) - Performance tracking and calculations
 
 ## Templates
 
@@ -103,6 +163,10 @@ chmod +x reset_db_with_testusers.sh
 Test users created:
 - Username: test_user1, Password: TempPass123!@#
 - Username: test_user2, Password: TempPass456!@#
+
+## Troubleshooting
+
+Common issues and solutions are documented in the [Development Setup](DEVELOPMENT_SETUP.md#troubleshooting) guide.
 
 ## Test Users
 

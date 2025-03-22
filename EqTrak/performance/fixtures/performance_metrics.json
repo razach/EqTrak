@@ -1,0 +1,92 @@
+[
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Position Gain/Loss",
+      "scope_type": "POSITION",
+      "data_type": "PERCENTAGE",
+      "computation_source": "position_gain",
+      "description": "Percentage gain/loss for a position",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "position_gain_percentage",
+      "is_active": true,
+      "tags": "performance,gain,position"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Portfolio Return",
+      "scope_type": "PORTFOLIO",
+      "data_type": "PERCENTAGE",
+      "computation_source": "portfolio_return",
+      "description": "Overall portfolio return percentage",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "portfolio_return_percentage",
+      "is_active": true,
+      "tags": "performance,return,portfolio"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Position Gain/Loss (Absolute)",
+      "scope_type": "POSITION",
+      "data_type": "CURRENCY",
+      "computation_source": "position_gain",
+      "description": "Absolute gain/loss for a position in currency",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "position_gain_absolute",
+      "is_active": true,
+      "tags": "performance,gain,position,absolute"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Portfolio Return (Absolute)",
+      "scope_type": "PORTFOLIO",
+      "data_type": "CURRENCY",
+      "computation_source": "portfolio_return",
+      "description": "Overall portfolio return in currency",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "portfolio_return_absolute",
+      "is_active": true,
+      "tags": "performance,return,portfolio,absolute"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Transaction Gain/Loss",
+      "scope_type": "TRANSACTION",
+      "data_type": "PERCENTAGE",
+      "computation_source": "transaction_impact",
+      "description": "Percentage gain/loss for a sale transaction",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "transaction_gain_percentage",
+      "is_active": true,
+      "tags": "performance,gain,transaction"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Transaction Gain/Loss (Absolute)",
+      "scope_type": "TRANSACTION",
+      "data_type": "CURRENCY",
+      "computation_source": "transaction_impact",
+      "description": "Absolute gain/loss for a sale transaction in currency",
+      "is_system": true,
+      "computation_order": 20,
+      "key": "transaction_gain_absolute",
+      "is_active": true,
+      "tags": "performance,gain,transaction,absolute"
+    }
+  }
+] 

@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 import uuid
+from django.apps import apps
 
 class MetricType(models.Model):
     SCOPE_TYPES = [
@@ -37,11 +38,13 @@ class MetricType(models.Model):
     ]
     
     metric_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    key = models.CharField(max_length=100, unique=True, null=True, blank=True, help_text="Unique identifier for the metric")
     name = models.CharField(max_length=100)
     scope_type = models.CharField(max_length=20, choices=SCOPE_TYPES, default='POSITION')
     data_type = models.CharField(max_length=20, choices=DATA_TYPES)
     description = models.TextField(blank=True, null=True)
     is_system = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="Whether this metric is active and available for use")
     tags = models.CharField(max_length=200, blank=True, null=True, help_text="Comma-separated tags for organization")
     is_computed = models.BooleanField(default=False)
     computation_source = models.CharField(max_length=50, choices=COMPUTATION_SOURCES, null=True, blank=True)
@@ -182,15 +185,34 @@ class MetricType(models.Model):
         return shares * market_price
 
     def _compute_gain(self, position):
-        """Calculate percentage gain/loss"""
-        cost_basis = self._get_dependency_value(position, 'cost_basis')
-        current_value = self._get_dependency_value(position, 'current_value')
-        
-        if not cost_basis or cost_basis == 0 or current_value is None:
+        """
+        Calculate percentage gain/loss - delegates to performance module.
+        Returns None if performance module is disabled or unavailable.
+        """
+        try:
+            # Check if performance app is installed
+            performance_app = apps.get_app_config('performance')
+            
+            # Get references to performance module components
+            performance_settings = performance_app.module.models.PerformanceSettings
+            performance_service = performance_app.module.services.PerformanceService
+            
+            # Check if feature is enabled
+            if not performance_settings.is_feature_enabled():
+                return None
+                
+            # Get performance metric
+            performance_metric = performance_service.calculate_position_performance(position)
+            
+            # Return percentage gain/loss if available
+            if performance_metric:
+                return performance_metric.percentage_gain_loss
+                
             return None
             
-        gain = ((current_value - cost_basis) / cost_basis) * 100
-        return round(gain, 2)
+        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
+            # Any issues with the performance module means we can't calculate gain/loss
+            return None
 
     def _compute_portfolio_value(self, portfolio):
         """Calculate total portfolio value"""
@@ -208,26 +230,34 @@ class MetricType(models.Model):
         return total_value
 
     def _compute_portfolio_return(self, portfolio):
-        """Calculate portfolio return percentage"""
-        total_value = self._get_dependency_value(portfolio, 'total_value')
-        if not total_value:
+        """
+        Calculate portfolio return percentage - delegates to performance module.
+        Returns None if performance module is disabled or unavailable.
+        """
+        try:
+            # Check if performance app is installed
+            performance_app = apps.get_app_config('performance')
+            
+            # Get references to performance module components
+            performance_settings = performance_app.module.models.PerformanceSettings
+            performance_service = performance_app.module.services.PerformanceService
+            
+            # Check if feature is enabled
+            if not performance_settings.is_feature_enabled():
+                return None
+                
+            # Get performance metric
+            performance_metric = performance_service.calculate_portfolio_performance(portfolio)
+            
+            # Return percentage gain/loss if available
+            if performance_metric:
+                return performance_metric.percentage_gain_loss
+                
             return None
             
-        # Calculate total cost basis
-        total_cost = 0
-        for position in portfolio.position_set.filter(is_active=True):
-            position_cost = position.get_metric_value('Cost Basis', system_only=True) or 0
-            total_cost += position_cost
-            
-        # Add cash to both sides of the equation
-        cash_balance = self._get_dependency_value(portfolio, 'cash_balance') or 0
-        total_value += cash_balance
-        total_cost += cash_balance
-        
-        if total_cost == 0:
-            return 0
-            
-        return ((total_value - total_cost) / total_cost) * 100
+        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
+            # Any issues with the performance module means we can't calculate return
+            return None
 
     def _compute_transaction_impact(self, transaction):
         """Calculate transaction impact"""

@@ -1,5 +1,8 @@
 <!-- Metric Types Section -->
 {% load user_metrics_tags %}
+{% load performance_tags %}
+
+{% can_access_performance_metrics as can_access %}
 
 <div class="row">
     <!-- Portfolio Metrics -->
@@ -11,25 +14,33 @@
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for metric in portfolio_metrics %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
-                                    {{ metric.name }}
-                                </span>
-                                {% if metric.is_computed %}
-                                    <span class="badge bg-secondary ms-1">
-                                        <i class="bi bi-calculator"></i>
+                        {% is_performance_metric metric.name as is_perf_metric %}
+                        {% if not is_perf_metric or can_access %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                        {{ metric.name }}
                                     </span>
-                                {% endif %}
-                                {% is_user_defined_metric metric as is_user_metric %}
-                                {% if is_user_metric %}
-                                    <span class="badge bg-info ms-1">
-                                        <i class="bi bi-person"></i>
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
-                        </li>
+                                    {% if metric.is_computed %}
+                                        <span class="badge bg-secondary ms-1">
+                                            <i class="bi bi-calculator"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% is_user_defined_metric metric as is_user_metric %}
+                                    {% if is_user_metric %}
+                                        <span class="badge bg-info ms-1">
+                                            <i class="bi bi-person"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if is_perf_metric %}
+                                        <span class="badge bg-warning ms-1" title="Performance metric">
+                                            <i class="bi bi-bar-chart-fill"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                            </li>
+                        {% endif %}
                     {% empty %}
                         <li class="list-group-item">No portfolio metrics available</li>
                     {% endfor %}
@@ -47,25 +58,33 @@
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for metric in position_metrics %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
-                                    {{ metric.name }}
-                                </span>
-                                {% if metric.is_computed %}
-                                    <span class="badge bg-secondary ms-1">
-                                        <i class="bi bi-calculator"></i>
+                        {% is_performance_metric metric.name as is_perf_metric %}
+                        {% if not is_perf_metric or can_access %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                        {{ metric.name }}
                                     </span>
-                                {% endif %}
-                                {% is_user_defined_metric metric as is_user_metric %}
-                                {% if is_user_metric %}
-                                    <span class="badge bg-info ms-1">
-                                        <i class="bi bi-person"></i>
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
-                        </li>
+                                    {% if metric.is_computed %}
+                                        <span class="badge bg-secondary ms-1">
+                                            <i class="bi bi-calculator"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% is_user_defined_metric metric as is_user_metric %}
+                                    {% if is_user_metric %}
+                                        <span class="badge bg-info ms-1">
+                                            <i class="bi bi-person"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if is_perf_metric %}
+                                        <span class="badge bg-warning ms-1" title="Performance metric">
+                                            <i class="bi bi-bar-chart-fill"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                            </li>
+                        {% endif %}
                     {% empty %}
                         <li class="list-group-item">No position metrics available</li>
                     {% endfor %}
@@ -83,25 +102,33 @@
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for metric in transaction_metrics %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
-                                    {{ metric.name }}
-                                </span>
-                                {% if metric.is_computed %}
-                                    <span class="badge bg-secondary ms-1">
-                                        <i class="bi bi-calculator"></i>
+                        {% is_performance_metric metric.name as is_perf_metric %}
+                        {% if not is_perf_metric or can_access %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span {% if metric.is_computed %}title="Computed metric" class="text-decoration-underline dotted-underline"{% endif %}>
+                                        {{ metric.name }}
                                     </span>
-                                {% endif %}
-                                {% is_user_defined_metric metric as is_user_metric %}
-                                {% if is_user_metric %}
-                                    <span class="badge bg-info ms-1">
-                                        <i class="bi bi-person"></i>
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
-                        </li>
+                                    {% if metric.is_computed %}
+                                        <span class="badge bg-secondary ms-1">
+                                            <i class="bi bi-calculator"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% is_user_defined_metric metric as is_user_metric %}
+                                    {% if is_user_metric %}
+                                        <span class="badge bg-info ms-1">
+                                            <i class="bi bi-person"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if is_perf_metric %}
+                                        <span class="badge bg-warning ms-1" title="Performance metric">
+                                            <i class="bi bi-bar-chart-fill"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-light text-dark">{{ metric.get_data_type_display }}</span>
+                            </li>
+                        {% endif %}
                     {% empty %}
                         <li class="list-group-item">No transaction metrics available</li>
                     {% endfor %}
