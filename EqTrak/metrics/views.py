@@ -8,6 +8,7 @@ import datetime
 from itertools import groupby
 from operator import attrgetter
 from django.http import Http404
+from performance.services import PerformanceService
 
 @login_required
 def metric_type_create(request):
@@ -498,11 +499,19 @@ def transaction_metrics(request, portfolio_id, position_id, transaction_id):
                 )
                 metrics_by_type[metric] = [empty_value]
     
+    # Calculate transaction performance
+    performance_data = PerformanceService.calculate_transaction_performance(transaction, user=request.user)
+    
+    # Check if performance is enabled
+    is_performance_enabled = PerformanceService.is_performance_enabled(user=request.user)
+    
     return render(request, 'metrics/transaction_metrics.html', {
         'portfolio': portfolio,
         'position': position,
         'transaction': transaction,
-        'metrics_by_type': metrics_by_type
+        'metrics_by_type': metrics_by_type,
+        'performance_data': performance_data,
+        'is_performance_enabled': is_performance_enabled
     })
 
 @login_required

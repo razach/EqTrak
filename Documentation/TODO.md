@@ -11,6 +11,7 @@ This is the main / core app within the django project.
 
 - [ ] **Modular Templates**: Implement a general UI framework that allows other apps to keep code contained within each module.
     Goal: Allows apps to be turned on or off and have the UI update itself accordinaly
+- [ ] **UI Rebuild**: Rebuild the UI to move the detailed metric information to a settings section or even a detailed metric section.
 
 
 ### User APP Updates
@@ -18,8 +19,6 @@ This is the core app that handles all user level config and metadata
 
 - [x] **App Toogles**: Implement a user specific config section with the ability to turn on and off specific app modules.
     Goals: Allows the user to turn on and off features they don't need or want. Core app functions of portfolio and metrics cannot be turned off
-- [X] **Market Data Provider Preferences**: Implement user-specific provider selection and API key management.
-    Goals: Allow users to choose their preferred data sources and provide API keys
 
 
 ### Metric Module
@@ -27,7 +26,33 @@ This is the core app that keeps track of the system metrics and implements the a
 
 ## Priority Tasks
 
+- [X] **Global Metric Registry**: Implement a way to keep track of register metrics and allow other apps to check if they are available.
+    Seems to be implemented by calling get_system_metric get_system_metric() and get_metrics_for_scope()
 - [ ] **Cash Balance Function**: Implement cash balance function at the portfolio level based on sale transaction
+
+### Performance Module
+This module allow for gain/loss calculations at the portfolio, position, and transaction level. The idea is that if the user turns this feature off, then no gain/loss metrics are shown.
+
+## Priority Tasks
+
+- [WIP] **Basic MVP**: Stand up a new app and give it the ability to calculate gain and losses at each of the 3 levels. 
+  - Implementation plan created in Documentation/PERFORMANCE_MODULE.md
+  - Working on the Django app structure and models
+- [WIP] **Performance App Toggle**: A way to turn on and off the module
+  - Implementation will follow the pattern in APP_TOGGLES.md
+
+
+### Suggested Future Improvements
+
+- [ ] **Annualized performance**: Functionality to take time into considerations and shows performance over time. Allows apples to apples comparisons.
+- [ ] **Benchmark**: Show gains against a benchmark that the user can select. 
+
+### Valuation Module
+
+## Priority Tasks
+
+- [ ] **Basic MVP**: Stand up a new app and give it the ability to add in a few custom metrics
+- [ ] **Valueation App Toggle**: A way to turn on and off the module
 
 
 ### User Defined Metric Module
@@ -37,6 +62,7 @@ This is a minor app that handles user level custom metrics
 
 - [x] **User Defined Metrics**: Implement functionality in a separate app for users to define and track custom metrics
 - [x] **Move the add metric functionality over**: Move the add new metric functionality over to this separate app.
+- [ ] **Code review and clean up**: Conduct a general code review and clean things up.
 
 ### Suggested Future Improvements
 
@@ -94,20 +120,14 @@ This is the minor app that handles the API calls to get data from external sourc
 - [ ] **Error Handling**: Improve error handling for market data failures
 - [ ] **Stale Data Indicators**: Clearer visual indicators for stale data
 
-### Provider Management
-- [x] **Provider Selection**: Allow users to select their preferred market data provider
-- [x] **API Key Management**: Add secure storage for user-provided API keys
-- [x] **Provider Factory**: Implement factory pattern for selecting providers based on user preference
-- [ ] **Provider Comparison**: Add tools to compare data quality between providers
-
 ### Performance Optimization
-- [ ] **Caching Strategy**: Implement database caching for market data to reduce API calls (I believe there is a defect with the current implementation)
 - [ ] **Database Indexing**: Review and optimize indices for market_data models
 - [ ] **Query Optimization**: Review and optimize queries in MarketDataService
+- [ ] **Caching**: Implement response caching for frequent market data requests
 
 ## Technical Debt
 - [ ] **Test Coverage**: Increase test coverage for market_data app
 - [ ] **Documentation**: Update API documentation for MarketDataService
-- [x] **Provider Abstraction**: Review and improve the provider abstraction
+- [ ] **Provider Abstraction**: Review and improve the provider abstraction
 - [ ] **Error Logging**: Enhance error logging for market data operations
 

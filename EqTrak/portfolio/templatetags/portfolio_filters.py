@@ -1,5 +1,6 @@
 from django import template
 from django.template.defaultfilters import floatformat
+from portfolio.models import Portfolio
 
 register = template.Library()
 
@@ -20,4 +21,23 @@ def metric_display_value(position, metric_name):
 @register.filter(name='portfolio_metric_value')
 def portfolio_metric_value(portfolio, metric_name):
     """Get portfolio metric value"""
-    return portfolio.get_metric_value(metric_name) 
+    # Check if we have a valid Portfolio instance
+    if not isinstance(portfolio, Portfolio):
+        return None
+    
+    # Get the raw value from the model
+    value = portfolio.get_metric_value(metric_name)
+    
+    # For absolute metrics, ensure we're returning a raw numeric value
+    if value is not None and '(Absolute)' in metric_name:
+        try:
+            # Make sure we're not treating this as a percentage
+            # The raw value is already the currency amount (e.g., 5000)
+            return float(value)
+        except (ValueError, TypeError):
+            pass
+    elif value is not None and metric_name == 'Portfolio Return':
+        # For percentage return, value is already correct
+        return value
+    
+    return value 

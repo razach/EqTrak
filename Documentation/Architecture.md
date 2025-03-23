@@ -31,6 +31,7 @@ EqTrak/
 │   ├── views.py          # Metric-related views
 │   ├── urls.py           # Metrics URL patterns
 │   ├── forms.py          # Metric-related forms
+│   ├── providers.py      # Provider registry for metric calculations
 │   ├── context_processors.py  # Global metric context
 │   ├── templatetags/    # Custom template filters
 │   └── templates/
@@ -41,10 +42,27 @@ EqTrak/
 │           ├── metric_type_form.html
 │           └── metric_value_form.html
 │
+├── performance/           # Performance tracking app 
+│   ├── models.py         # PerformanceSettings, PerformanceMetric models
+│   ├── views.py          # Performance-related views
+│   ├── urls.py           # Performance URL patterns
+│   ├── services.py       # Performance calculation services
+│   ├── integration.py    # Integration with metrics system
+│   ├── providers.py      # Performance metric providers
+│   ├── signals.py        # Performance-related signals
+│   ├── patches.py        # Runtime patches for metrics
+│   ├── templatetags/     # Custom template tags
+│   └── templates/        # Performance templates
+│       └── performance/  
+│           └── components/
+│               └── portfolio_performance_card.html
+│
 ├── market_data/           # Market data app
 │   ├── models.py         # Security, PriceData models
 │   ├── views.py          # Market data views
 │   ├── urls.py           # Market data URL patterns
+│   ├── services.py       # Market data services
+│   ├── signals.py        # Market data signals
 │   ├── providers/        # Data provider implementations
 │   │   ├── base.py      # Provider base class
 │   │   └── yahoo.py     # Yahoo Finance provider
@@ -53,6 +71,16 @@ EqTrak/
 │       └── market_data/  # Market data templates
 │           ├── security_list.html
 │           └── price_chart.html
+│
+├── user_metrics/          # User-defined metrics app
+│   ├── models.py         # UserMetric, UserMetricValue models
+│   ├── views.py          # User metric views
+│   ├── urls.py           # User metric URL patterns
+│   ├── forms.py          # User metric forms
+│   └── templates/        # User metric templates
+│       └── user_metrics/
+│           ├── user_metric_form.html
+│           └── user_metric_list.html
 │
 ├── users/                # User management app
 │   ├── models.py        # User profile models
@@ -79,10 +107,12 @@ EqTrak/
   - Metrics app for position metrics
   - Users app for authentication
   - Market Data app for security prices
+  - Performance app for gain/loss calculations
 - **Key Features**:
-  - Portfolio CRUD operations
-  - Position management
-  - Transaction tracking
+  - Portfolio CRUD operations with UUID primary keys
+  - Position management with cost basis tracking
+  - Transaction tracking with impact calculation
+  - Cash balance management
 
 ### Metrics App
 - **Primary Purpose**: Handles metric types and values
@@ -98,9 +128,25 @@ EqTrak/
     - Confidence scoring
   - Automated computation system
   - Validation framework
+  - Provider system for external metric calculations
 - **Global Context**:
   - Provides metric types to all templates via context processor
   - Groups metrics by scope type (Position, Portfolio, Transaction)
+
+### Performance App
+- **Primary Purpose**: Calculates and tracks investment performance
+- **Dependencies**:
+  - Portfolio app for positions and transactions
+  - Metrics app for storing performance values
+  - Market Data app for current prices
+- **Key Features**:
+  - Gain/loss calculation at portfolio, position, and transaction levels
+  - Time-weighted return calculation
+  - Performance metrics with percentage and absolute values
+  - Feature toggle system (system and user level)
+  - Provider registration for metrics integration
+  - Integration with metrics app for display
+  - UUID support via ContentTypes framework
 
 ### Market Data App
 - **Primary Purpose**: Retrieves and manages security price data
@@ -113,10 +159,24 @@ EqTrak/
   - Price caching system
   - Security management
   - Data refresh scheduling
+  - Signals for price updates
+  - Configuration via fixtures
 - **Provider System**:
   - Base provider interface
   - Provider-specific implementations
   - Configuration-based provider selection
+
+### User Metrics App
+- **Primary Purpose**: Allows users to define and track custom metrics
+- **Dependencies**:
+  - Metrics app for core functionality
+  - Portfolio app for applying metrics
+- **Key Features**:
+  - Custom metric definitions
+  - User-defined formulas
+  - Metric sharing between users
+  - Visualization options
+  - Integration with system metrics
 
 ### Users App
 - **Primary Purpose**: User authentication and profiles
@@ -124,6 +184,8 @@ EqTrak/
 - **Key Features**:
   - User authentication
   - Profile management
+  - App feature access control
+  - User preferences storage
 
 ## Key Integration Points
 
@@ -143,10 +205,23 @@ EqTrak/
 4. **Market Data → Portfolio**
    - Provides security prices for positions
    - Updates position values based on latest prices
+   - Signals trigger recalculation when prices change
 
 5. **Market Data → Metrics**
    - Supplies price data for price-based metrics
-   - Enables performance calculations 
+   - Enables performance calculations
+   - Price update signals trigger metric updates
+
+6. **Performance → Metrics**
+   - Registers metric calculation providers
+   - Calculates performance metrics (gain/loss, returns)
+   - Integrates with metrics storage system
+   - Performance toggle controls metric visibility
+
+7. **User Metrics → Metrics**
+   - Extends the core metrics system with user definitions
+   - Provides custom calculation formulas
+   - Renders in the same UI components
 
 ## Template Structure
 
@@ -161,6 +236,7 @@ EqTrak/
 
 3. **Shared Components**
    - Metrics components can be included in portfolio templates
+   - Performance components provide gain/loss displays
    - Common styling and layout patterns
 
 ## URL Structure
@@ -177,6 +253,14 @@ EqTrak/
 │   ├── create/           # Create metric type
 │   └── <uuid>/          # Metric operations
 │
+├── performance/           # Performance management
+│   ├── toggle/           # Toggle performance features
+│   └── settings/         # Performance settings
+│
+├── user-metrics/          # User-defined metrics
+│   ├── create/           # Create user metric
+│   └── <uuid>/          # User metric operations
+│
 ├── market-data/           # Market data management
 │   ├── securities/       # Security management
 │   │   ├── create/      # Create security
@@ -190,10 +274,191 @@ EqTrak/
     └── profile/
 ```
 
+## Provider System
+
+The application implements a provider system that allows for clean separation of concerns between the metrics storage system and domain-specific calculation logic:
+
+### Provider Architecture
+
+```
+                  +-------------------+
+                  |                   |
+                  |  Metrics System   |
+                  |                   |
+                  +--------+----------+
+                           |
+                           | Registers
+                           | providers
+                           v
+             +-------------+-------------+
+             |                           |
+             |  metrics/providers.py     |
+             |  Provider Registry        |
+             |                           |
+             +--+----------+----------+--+
+                |          |          |
+                |          |          |
+     +----------v-+  +-----v------+  +v--------------+
+     |            |  |            |  |               |
+     | Performance|  | Market     |  | User-defined  |
+     | Providers  |  | Data       |  | Metric        |
+     |            |  | Providers  |  | Providers     |
+     +------------+  +------------+  +---------------+
+```
+
+### Key Components
+
+1. **Provider Registry** (metrics/providers.py)
+   - Central registry for metric calculation functions
+   - Simple dictionary-based lookup system
+   - Allows external apps to register calculation providers
+   ```python
+   METRIC_PROVIDERS = {}  # Dictionary mapping metric names to provider functions
+   
+   def register_provider(metric_name, provider_function):
+       """Register a function that can compute values for a specific metric"""
+       global METRIC_PROVIDERS
+       METRIC_PROVIDERS[metric_name] = provider_function
+   ```
+
+2. **Provider Registration** (performance/providers.py)
+   - Domain-specific apps register their calculation functions
+   - Registration happens during app initialization (in AppConfig.ready())
+   - Maps metric names to calculation functions
+   ```python
+   def register_providers():
+       """Register all performance metric providers with the metrics system"""
+       from metrics.providers import register_provider
+       
+       # Register position gain/loss providers
+       register_provider(POSITION_GAIN, PerformanceCalculationService.get_position_gain_percentage)
+       register_provider(POSITION_GAIN_ABSOLUTE, PerformanceCalculationService.get_position_gain_absolute)
+   ```
+
+3. **Integration Functions** (performance/integration.py)
+   - Clean interface between domain logic and metrics storage
+   - Handles converting domain values to metric values
+   - Manages metric creation/updating
+   ```python
+   def store_position_gain_percentage(position, value):
+       """Store position gain/loss percentage in the metrics system"""
+       from metrics.models import MetricType, MetricValue
+       metric_type = MetricType.objects.get(name=POSITION_GAIN)
+       MetricValue.objects.update_or_create(
+           metric_type=metric_type,
+           position=position,
+           defaults={'value': value}
+       )
+   ```
+
+4. **Computation Flow**
+   - Metrics app tries to find a provider for a requested metric
+   - If found, calls the provider function to get the value
+   - If no provider, falls back to built-in calculation methods
+   - Providers are domain-specific and encapsulate business logic
+   ```python
+   def compute_value(self, target_object):
+       """First try using a registered provider, then fall back to internal methods"""
+       from metrics.providers import compute_metric_value
+       
+       # Try using a provider first
+       result = compute_metric_value(self.name, target_object)
+       if result is not None:
+           return result
+           
+       # Fall back to built-in computation methods
+       # ...
+   ```
+
+### Benefits
+
+1. **Modularity**
+   - Domain-specific calculation logic stays in relevant apps
+   - Metrics app remains agnostic about calculation implementation
+   - Clean separation of responsibilities
+
+2. **Extensibility**
+   - New apps can register their own providers
+   - Metrics system can be extended without modification
+   - Pluggable architecture for different calculation methods
+
+3. **Simplified Testing**
+   - Provider functions can be tested in isolation
+   - Mock providers can be registered for testing
+   - Reduced dependencies between systems
+
+### Implementation Example
+
+```python
+# In metrics/providers.py
+METRIC_PROVIDERS = {}
+
+def register_provider(metric_name, provider_function):
+    """Register a provider function for a specific metric"""
+    global METRIC_PROVIDERS
+    METRIC_PROVIDERS[metric_name] = provider_function
+    
+def compute_metric_value(metric_name, target_object):
+    """Compute a metric value using the registered provider"""
+    provider = get_provider(metric_name)
+    if provider:
+        return provider(target_object)
+    return None
+
+# In domain-specific app (e.g., performance/providers.py)
+def register_providers():
+    """Register domain-specific providers"""
+    from metrics.providers import register_provider
+    register_provider('Position Gain/Loss', PerformanceCalculationService.get_position_gain_percentage)
+    register_provider('Portfolio Return', PerformanceCalculationService.get_portfolio_return_percentage)
+    
+# In app initialization (e.g., performance/apps.py)
+class PerformanceConfig(AppConfig):
+    name = 'performance'
+    
+    def ready(self):
+        """Initialize the app when Django starts"""
+        from .providers import register_providers
+        register_providers()
+```
+
+## Configuration and Fixtures
+
+The application uses Django fixtures for configuration data, allowing for:
+
+1. **Standard Metric Types**
+   - Core metric types defined in `metrics/fixtures/standard_metrics.json`
+   - Loaded during initial setup and migrations
+
+2. **Performance Metrics**
+   - Performance-related metrics in `performance/fixtures/performance_metrics.json`
+   - Toggle-able via management commands
+
+3. **Market Data Configuration**
+   - Provider settings in `market_data/fixtures/provider_config.json`
+   - Refresh intervals and API settings
+
+### Management Commands
+
+Various management commands facilitate configuration:
+
+```bash
+# Metrics configuration
+python manage.py configure_metrics --load --module=metrics
+
+# Performance features
+python manage.py toggle_performance_metrics --activate
+
+# Market data refresh
+python manage.py refresh_market_data --all
+```
+
 ## Related Documentation
 - [Data Model](Data%20Model.md) - Database schema and relationships
 - [Templates](templates.md) - Template structure and components
-- [Design Document](Design%20Document.md) - Application design and features 
+- [Design Document](Design%20Document.md) - Application design and features
+- [PERFORMANCE_MODULE.md](PERFORMANCE_MODULE.md) - Performance app details
+- [APP_TOGGLES.md](APP_TOGGLES.md) - Feature toggle system
 
 ## Docker Development
 

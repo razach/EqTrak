@@ -7,163 +7,122 @@ EqTrak is a comprehensive web application designed to help investors track, anal
 📚 [View Full Documentation](Documentation/README.md)
 
 ### Quick Links
-- [Design Document](Documentation/Design%20Document.md) - Detailed feature specifications and architecture
+- [Development Setup](Documentation/DEVELOPMENT_SETUP.md) - Setting up your development environment
+- [Architecture](Documentation/Architecture.md) - Application architecture and design patterns
 - [Data Model](Documentation/Data%20Model.md) - Database schema and relationships
-- [Templates](Documentation/templates.md) - Frontend template structure and components
+- [Performance Module](Documentation/PERFORMANCE_MODULE.md) - Performance tracking implementation
+- [Changelog](Documentation/CHANGELOG.md) - Recent fixes and improvements
 
 ## Key Features
 
-### 📊 Portfolio Management & Benchmarking
-- Track multiple investment portfolios
-- Real-time position monitoring
-- Performance comparison against market benchmarks
-- Portfolio allocation visualization
-- Historical performance analytics
+### 📊 Portfolio Management & Performance Tracking
+- Track multiple investment portfolios with positions and transactions
+- Real-time position monitoring with current values
+- Performance metrics with gain/loss calculations at portfolio, position, and transaction levels
+- Comprehensive transaction history and analysis
+- Custom user-defined metrics for personalized tracking
 
-### 📈 Investment Decision Scorekeeper
-- Record and evaluate buy/sell decisions
-- Track performance of individual trades
-- Maintain detailed transaction notes
-- Generate decision quality metrics
+### 📈 Market Data Integration
+- Automated market price tracking from reliable sources
+- Detailed stock information and fundamental data
+- Flexible update control settings
+- Manual and automatic data updates with configurable frequency
 
-### 💹 Valuation Analytics
-- Monitor key valuation metrics (P/E, P/B, dividend yield)
-- Historical valuation trend analysis
-- Custom threshold alerts
-- Comparative analysis tools
+### 💹 Modular Architecture
+- Core tracking functionality with extensible modules
+- Performance module for gain/loss calculations
+- Custom metrics definition and management
+- Feature toggles to enable/disable functionality by module or user
 
-### 🎯 Forecasting Tools
-1. **Valuation/Hypothesis Store**
-   - Create and save price forecasts
-   - Input custom growth and profitability assumptions
-   - Set price and valuation alerts
-   
-2. **Valuation Sense Check**
-   - Back-calculate required growth rates
-   - Analyze implied valuations
-   - Risk and return scenario modeling
+## Technology Stack
 
-## Technical Stack
+- **Backend**: Django 4.2, Python 3.9+
+- **Frontend**: Bootstrap 5, Vanilla JavaScript
+- **Database**: SQLite (development), PostgreSQL (production)
+- **Deployment**: Docker, Gunicorn
 
-- **Backend**: Django (Python web framework)
-- **Database**: SQLite (Development), PostgreSQL (Production)
-- **Frontend**: 
-  - Bootstrap 5 for responsive UI
-  - JavaScript for interactivity
-  - Django Templates for server-side rendering
-- **API Integration**: Financial market data providers
+## Getting Started
 
-## Development Setup
+See [DEVELOPMENT_SETUP.md](Documentation/DEVELOPMENT_SETUP.md) for detailed instructions.
 
-### Option 1: Using Docker (Recommended)
-1. **Prerequisites**
-   - Docker
+### Quick Start
 
-2. **Quick Start with Docker**
-   ```bash
-   # Clone the repository
-   git clone [repository-url]
-   cd EqTrak
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/eqtrak.git
+cd eqtrak
 
-   # Build the Docker image
-   docker build -t eqtrak-dev .
-   
-   # Run with volume mapping to enable real-time development
-   docker run -d -it -v "$(pwd):/workspace" -p 8000:8000 eqtrak-dev
-   ```
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-3. **Access the application**
-   - Visit `http://localhost:8000` to access the application
-   - Admin interface available at `http://localhost:8000/admin`
+# Install dependencies
+pip install -r requirements.txt
 
-4. **Common Docker Commands**
-   ```bash
-   # View running containers
-   docker ps
-   
-   # Execute commands in container
-   docker exec -it <container_id> python manage.py migrate
-   docker exec -it <container_id> python manage.py createsuperuser
-   
-   # View logs
-   docker logs <container_id>
-   
-   # Stop container
-   docker stop <container_id>
-   ```
+# Setup database and load initial data
+./EqTrak/reset_db_with_testusers.sh
 
-### Option 2: Traditional Setup
-1. **Prerequisites**
-   - Python 3.8+
-   - pip (Python package manager)
-   - Virtual environment tool (venv recommended)
+# Start development server
+cd EqTrak
+python manage.py runserver
+```
 
-2. **Installation**
-   ```bash
-   git clone [repository-url]
-   cd EqTrak
-   ```
+## Architecture Overview
 
-3. **Create and activate virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+EqTrak is organized into several key modules:
 
-4. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+- **Portfolio**: Core portfolio, position, and transaction functionality
+- **Metrics**: System for defining, calculating, and displaying metrics
+- **Market Data**: Integration with market data providers
+- **Performance**: Gain/loss calculations and performance tracking
+- **User Metrics**: Custom user-defined metric creation and management
 
-5. **Setup database**
-   ```bash
-   python manage.py migrate
-   ```
+For more details on the architecture, see [Architecture.md](Documentation/Architecture.md).
 
-6. **Create a superuser (optional)**
-   ```bash
-   python manage.py createsuperuser
-   ```
+## Recent Improvements (v0.2.0)
 
-7. **Run development server**
-   ```bash
-   python manage.py runserver
-   ```
+The latest version includes important fixes to the Performance module:
 
-Visit `http://localhost:8000` to access the application.
+- **UUID Storage**: Fixed performance metric storage by changing `object_id` from `PositiveIntegerField` to `CharField(max_length=40)` to properly handle UUID primary keys
+- **Primary Key References**: Corrected references in calculation services from `.id` to model-specific primary key fields (`portfolio_id`, `position_id`, `transaction_id`)
+- **Template Handling**: Improved template conditional logic for properly evaluating performance metric access
+- **Patching Mechanism**: Refactored the patch mechanism for `MetricType.get_system_metric` to handle class method arguments correctly
 
-## Project Status
-🚧 Currently in Development
+See the [Changelog](Documentation/CHANGELOG.md) for complete details of recent fixes.
 
-### Current Focus
-- Core portfolio management features
-- Basic metric tracking
-- User authentication and authorization
-- Template structure and styling
+## Development Approach
 
-### Coming Soon
-- Advanced analytics
-- API integrations
-- Real-time data updates
-- Mobile responsiveness improvements
+EqTrak uses a fixture-based approach for configuration:
+- Schema changes in migrations
+- Configuration data in JSON fixtures
+- Automatic loading at application startup
 
-## Contributing
-We welcome contributions! Please read our [contributing guidelines](Documentation/CONTRIBUTING.md) before submitting pull requests.
+This approach keeps migrations clean and makes configuration changes easier to manage.
 
-### Development Process
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+## Documentation
+
+- [Development Setup](Documentation/DEVELOPMENT_SETUP.md): Setting up the development environment
+- [Changelog](Documentation/CHANGELOG.md): History of changes and fixes
+- [Performance Module](Documentation/PERFORMANCE_MODULE.md): Performance tracking features
+- [Troubleshooting](Documentation/DEVELOPMENT_SETUP.md#troubleshooting): Common issues and solutions
+
+## Testing
+
+```bash
+# Run test suite
+python manage.py test
+```
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
 For support, please:
 1. Check the [documentation](Documentation/README.md)
-2. Open an issue in the repository
-3. Contact the development team
+2. Review the [troubleshooting guide](Documentation/DEVELOPMENT_SETUP.md#troubleshooting)
+3. Open an issue in the repository
+4. Contact the development team
 
 ---
 *Note: This project is under active development. Features and documentation will be updated regularly.*

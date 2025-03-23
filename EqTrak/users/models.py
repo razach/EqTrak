@@ -18,6 +18,13 @@ class UserSettings(models.Model):
         help_text="Enable or disable market data updates for your account"
     )
     
+    # Performance module toggle
+    performance_enabled = models.BooleanField(
+        default=True,
+        verbose_name="Enable Performance Tracking",
+        help_text="Enable or disable performance tracking and gain/loss calculations"
+    )
+    
     # Market data provider preference
     PROVIDER_CHOICES = [
         ('system', 'System Default'),

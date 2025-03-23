@@ -8,6 +8,7 @@ class UserSettingsForm(forms.ModelForm):
         model = UserSettings
         fields = [
             'market_data_enabled',
+            'performance_enabled',
             'market_data_provider',
             'alpha_vantage_api_key',
             # Add other settings fields as needed
@@ -20,6 +21,10 @@ class UserSettingsForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Customize form field appearance
         self.fields['market_data_enabled'].widget = forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'data-toggle': 'toggle',
+        })
+        self.fields['performance_enabled'].widget = forms.CheckboxInput(attrs={
             'class': 'form-check-input',
             'data-toggle': 'toggle',
         })

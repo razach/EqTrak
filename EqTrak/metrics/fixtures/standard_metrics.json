@@ -1,0 +1,137 @@
+[
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Market Price",
+      "scope_type": "POSITION",
+      "data_type": "PRICE",
+      "description": "Current market price per share",
+      "is_system": true,
+      "is_computed": false,
+      "computation_order": 10,
+      "key": "market_price",
+      "is_active": true,
+      "tags": "market,price,position"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Total Shares",
+      "scope_type": "POSITION",
+      "data_type": "SHARES",
+      "computation_source": "shares",
+      "description": "Total number of shares in the position",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "total_shares",
+      "is_active": true,
+      "tags": "shares,position"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Average Purchase Price",
+      "scope_type": "POSITION",
+      "data_type": "PRICE",
+      "computation_source": "avg_price",
+      "description": "Average purchase price per share",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "avg_price",
+      "is_active": true,
+      "tags": "price,position,cost"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Cost Basis",
+      "scope_type": "POSITION",
+      "data_type": "CURRENCY",
+      "computation_source": "cost_basis",
+      "description": "Total cost of acquiring the position",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "cost_basis",
+      "is_active": true,
+      "tags": "cost,position"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Current Value",
+      "scope_type": "POSITION",
+      "data_type": "CURRENCY",
+      "computation_source": "current_value",
+      "description": "Current market value of the position",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "current_value",
+      "is_active": true,
+      "tags": "value,position,market"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Total Portfolio Value",
+      "scope_type": "PORTFOLIO",
+      "data_type": "CURRENCY",
+      "computation_source": "total_value",
+      "description": "Total market value of all positions in the portfolio",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "total_value",
+      "is_active": true,
+      "tags": "value,portfolio,market"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Cash Balance",
+      "scope_type": "PORTFOLIO",
+      "data_type": "CURRENCY",
+      "computation_source": "cash_balance",
+      "description": "Available cash in the portfolio",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "cash_balance",
+      "is_active": true,
+      "tags": "cash,portfolio,balance"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Transaction Impact",
+      "scope_type": "TRANSACTION",
+      "data_type": "CURRENCY",
+      "computation_source": "transaction_impact",
+      "description": "Financial impact of the transaction",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "transaction_impact",
+      "is_active": true,
+      "tags": "transaction,impact"
+    }
+  },
+  {
+    "model": "metrics.metrictype",
+    "fields": {
+      "name": "Fee Percentage",
+      "scope_type": "TRANSACTION",
+      "data_type": "PERCENTAGE",
+      "computation_source": "fee_percentage",
+      "description": "Fees as a percentage of transaction value",
+      "is_system": true,
+      "computation_order": 10,
+      "key": "fee_percentage",
+      "is_active": true,
+      "tags": "transaction,fee,percentage"
+    }
+  }
+] 

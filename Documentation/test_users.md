@@ -1,28 +1,65 @@
-# Test Users Credentials
+# Test Users in EqTrak
 
-[← Back to Documentation](README.md)
+EqTrak includes test users for development and testing purposes. These users are created using the fixture-based configuration approach rather than migrations.
 
-**WARNING: Do not commit this file to git!**
+## Available Test Users
 
-## Test User 1
-Email: test_user1@example.com
-Username: test_user1
-Password: TempPass123!@#
+| Username    | Password        | Role        | Notes                          |
+|-------------|-----------------|-------------|--------------------------------|
+| test_user1  | TempPass123!@#  | Staff       | Standard test user with admin  |
+| test_user2  | TempPass456!@#  | Staff       | Alternative test user          |
 
-## Test User 2
-Email: test_user2@example.com
-Username: test_user2
-Password: TempPass456!@#
+## Creating Test Users
 
-## Using Test Users in Development
-
-These test users are automatically created when you run the `reset_db_with_testusers.sh` script:
+Test users are defined in `users/fixtures/test_users.json` and can be loaded using:
 
 ```bash
-./reset_db_with_testusers.sh
+# Check if test users exist
+python manage.py load_test_users --check
+
+# Create test users in development environment
+python manage.py load_test_users
+
+# Force creating test users (even in production - USE CAUTION)
+python manage.py load_test_users --force
 ```
 
-For more information on development tools, see [DEVELOPMENT.md](DEVELOPMENT.md).
+## Automatic Checking
+
+The users app automatically checks for the existence of test users during initialization in development environments. If test users are missing, a warning is logged.
+
+## Security Notes
+
+1. The `load_test_users` command includes a safety check to prevent accidental creation of test users in production.
+2. Test user passwords are pre-hashed in the fixture file for security.
+3. The command will refuse to run in production unless the `--force` flag is used.
+
+## Customizing Test Users
+
+To customize or add test users:
+
+1. Edit the `users/fixtures/test_users.json` file
+2. Use the following format:
+
+```json
+{
+  "model": "auth.user",
+  "fields": {
+    "username": "my_test_user",
+    "email": "testuser@example.com",
+    "password": "<hashed_password>",
+    "is_staff": true,
+    "is_active": true
+  }
+}
+```
+
+To generate a hashed password for use in fixtures:
+
+```python
+from django.contrib.auth.hashers import make_password
+make_password("your_password_here")
+```
 
 ## Related Documentation
 - [Development Guide](DEVELOPMENT.md) - Development tools and workflows

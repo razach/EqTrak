@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'metrics',
     'market_data',
     'user_metrics',
+    'performance',
 ]
 
 MIDDLEWARE = [
@@ -81,6 +82,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'metrics.context_processors.metric_types',
                 'user_metrics.context_processors.user_metrics_enabled',
+                'performance.context_processors.performance_settings',
             ],
         },
     },

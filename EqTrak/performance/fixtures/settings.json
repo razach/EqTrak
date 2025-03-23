@@ -1,0 +1,10 @@
+[
+  {
+    "model": "performance.performancesettings",
+    "pk": 1,
+    "fields": {
+      "updates_enabled": true,
+      "last_modified": "2024-03-22T00:00:00Z"
+    }
+  }
+] 

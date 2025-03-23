@@ -5,7 +5,12 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>{{ page_title }}</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>{{ page_title }}</h1>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
     
     {% if messages %}
     <div class="messages">
@@ -17,7 +22,7 @@
     </div>
     {% endif %}
     
-    <div class="card">
+    <div class="card mb-4">
         <div class="card-header">
             <h5>User Preferences</h5>
         </div>
@@ -25,7 +30,11 @@
             <form method="post">
                 {% csrf_token %}
                 
-                <h6>Market Data Settings</h6>
+                <!-- Market Data Section -->
+                <h6 class="d-flex align-items-center">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Market Data Settings
+                </h6>
                 <hr>
                 
                 <div class="form-group mb-3">
@@ -44,33 +53,54 @@
                     <small class="form-text text-muted">{{ form.market_data_provider.help_text }}</small>
                 </div>
                 
-                <div id="api-key-section" class="form-group mb-3 {% if form.market_data_provider.value != 'alpha_vantage' %}d-none{% endif %}">
+                <div id="api-key-section" class="form-group mb-4 {% if form.market_data_provider.value != 'alpha_vantage' %}d-none{% endif %}">
                     <label for="{{ form.alpha_vantage_api_key.id_for_label }}">{{ form.alpha_vantage_api_key.label }}</label>
                     {{ form.alpha_vantage_api_key }}
                     <small class="form-text text-muted">Required for Alpha Vantage data provider.</small>
                 </div>
                 
-                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <!-- Performance Section -->
+                <h6 class="d-flex align-items-center mt-4">
+                    <i class="bi bi-bar-chart-fill me-2"></i>
+                    Performance Tracking
+                </h6>
+                <hr>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        {{ form.performance_enabled }}
+                        <label class="form-check-label" for="{{ form.performance_enabled.id_for_label }}">
+                            {{ form.performance_enabled.label }}
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">{{ form.performance_enabled.help_text }}</small>
+                </div>
+                
+                <!-- Save/Cancel Buttons -->
+                <div class="d-flex justify-content-between mt-4 pt-2 border-top">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
             </form>
         </div>
     </div>
+    
+    <!-- App Status Section -->
+    {% include "users/components/app_toggles_status.html" %}
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Dynamic form behavior
-        const providerSelect = document.getElementById('{{ form.market_data_provider.id_for_label }}');
-        const apiKeySection = document.getElementById('api-key-section');
-        
-        providerSelect.addEventListener('change', function() {
-            if (this.value === 'alpha_vantage') {
-                apiKeySection.classList.remove('d-none');
-            } else {
-                apiKeySection.classList.add('d-none');
-            }
-        });
+$(document).ready(function() {
+    // Show/hide API key field based on provider selection
+    $('#{{ form.market_data_provider.id_for_label }}').change(function() {
+        if ($(this).val() === 'alpha_vantage') {
+            $('#api-key-section').removeClass('d-none');
+        } else {
+            $('#api-key-section').addClass('d-none');
+        }
     });
+});
 </script>
-{% endblock %}
 {% endblock %}

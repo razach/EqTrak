@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 import uuid
+from django.apps import apps
 
 class MetricType(models.Model):
     SCOPE_TYPES = [
@@ -31,17 +32,20 @@ class MetricType(models.Model):
         ('total_value', 'Total Portfolio Value'),
         ('cash_balance', 'Cash Balance'),
         ('portfolio_return', 'Portfolio Return'),
+        ('time_weighted_return', 'Time-Weighted Return'),
         # Transaction metrics
         ('transaction_impact', 'Transaction Impact'),
         ('fee_percentage', 'Fee Percentage')
     ]
     
     metric_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    key = models.CharField(max_length=100, unique=True, null=True, blank=True, help_text="Unique identifier for the metric")
     name = models.CharField(max_length=100)
     scope_type = models.CharField(max_length=20, choices=SCOPE_TYPES, default='POSITION')
     data_type = models.CharField(max_length=20, choices=DATA_TYPES)
     description = models.TextField(blank=True, null=True)
     is_system = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="Whether this metric is active and available for use")
     tags = models.CharField(max_length=200, blank=True, null=True, help_text="Comma-separated tags for organization")
     is_computed = models.BooleanField(default=False)
     computation_source = models.CharField(max_length=50, choices=COMPUTATION_SOURCES, null=True, blank=True)
@@ -67,6 +71,25 @@ class MetricType(models.Model):
             query['is_system'] = False
         return cls.objects.filter(**query).order_by('computation_order', 'name')
 
+    @classmethod
+    def is_performance_enabled(cls, user=None):
+        """
+        Check if performance calculations are enabled.
+        Provides a consistent interface for checking across the app.
+        
+        Args:
+            user: Optional user to check settings for
+            
+        Returns:
+            Boolean indicating if performance is enabled
+        """
+        try:
+            from performance.services import PerformanceCalculationService
+            return PerformanceCalculationService.is_enabled(user=user)
+        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
+            # If we can't access the performance service, assume disabled
+            return False
+
     def compute_value(self, target_object):
         """Compute the metric value for a target object (position, transaction, or portfolio)"""
         if not self.is_computed:
@@ -76,6 +99,13 @@ class MetricType(models.Model):
         if not self._validate_scope(target_object):
             return None
             
+        # Try using an external provider first (if registered)
+        from .providers import compute_metric_value
+        external_value = compute_metric_value(self.name, target_object)
+        if external_value is not None:
+            return external_value
+            
+        # Fall back to internal computation methods for standard metrics
         if self.computation_source == 'shares':
             return self._compute_shares(target_object)
         elif self.computation_source == 'avg_price':
@@ -84,14 +114,11 @@ class MetricType(models.Model):
             return self._compute_cost_basis(target_object)
         elif self.computation_source == 'current_value':
             return self._compute_current_value(target_object)
-        elif self.computation_source == 'position_gain':
-            return self._compute_gain(target_object)
         elif self.computation_source == 'total_value':
             return self._compute_portfolio_value(target_object)
-        elif self.computation_source == 'portfolio_return':
-            return self._compute_portfolio_return(target_object)
         elif self.computation_source == 'transaction_impact':
             return self._compute_transaction_impact(target_object)
+            
         return None
 
     def _validate_scope(self, target_object):
@@ -181,17 +208,6 @@ class MetricType(models.Model):
             
         return shares * market_price
 
-    def _compute_gain(self, position):
-        """Calculate percentage gain/loss"""
-        cost_basis = self._get_dependency_value(position, 'cost_basis')
-        current_value = self._get_dependency_value(position, 'current_value')
-        
-        if not cost_basis or cost_basis == 0 or current_value is None:
-            return None
-            
-        gain = ((current_value - cost_basis) / cost_basis) * 100
-        return round(gain, 2)
-
     def _compute_portfolio_value(self, portfolio):
         """Calculate total portfolio value"""
         total_value = 0
@@ -206,28 +222,6 @@ class MetricType(models.Model):
             total_value += position_value
         
         return total_value
-
-    def _compute_portfolio_return(self, portfolio):
-        """Calculate portfolio return percentage"""
-        total_value = self._get_dependency_value(portfolio, 'total_value')
-        if not total_value:
-            return None
-            
-        # Calculate total cost basis
-        total_cost = 0
-        for position in portfolio.position_set.filter(is_active=True):
-            position_cost = position.get_metric_value('Cost Basis', system_only=True) or 0
-            total_cost += position_cost
-            
-        # Add cash to both sides of the equation
-        cash_balance = self._get_dependency_value(portfolio, 'cash_balance') or 0
-        total_value += cash_balance
-        total_cost += cash_balance
-        
-        if total_cost == 0:
-            return 0
-            
-        return ((total_value - total_cost) / total_cost) * 100
 
     def _compute_transaction_impact(self, transaction):
         """Calculate transaction impact"""
