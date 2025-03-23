@@ -17,16 +17,16 @@
   {
     "model": "metrics.metrictype",
     "fields": {
-      "name": "Portfolio Return",
+      "name": "Portfolio Time-Weighted Return",
       "scope_type": "PORTFOLIO",
       "data_type": "PERCENTAGE",
-      "computation_source": "portfolio_return",
-      "description": "Overall portfolio return percentage",
+      "computation_source": "time_weighted_return",
+      "description": "Time-weighted portfolio return percentage that accounts for cash flows",
       "is_system": true,
       "computation_order": 20,
-      "key": "portfolio_return_percentage",
+      "key": "portfolio_twr",
       "is_active": true,
-      "tags": "performance,return,portfolio"
+      "tags": "performance,return,portfolio,time-weighted"
     }
   },
   {

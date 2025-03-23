@@ -7,7 +7,7 @@ import logging
 from functools import wraps
 from metrics.models import MetricType
 from .models import PerformanceSettings
-from .metrics import PERFORMANCE_METRICS
+from .integration import PERFORMANCE_METRICS
 
 logger = logging.getLogger(__name__)
 

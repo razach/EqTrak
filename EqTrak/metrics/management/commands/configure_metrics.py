@@ -139,8 +139,8 @@ class Command(BaseCommand):
                 
             fields = item['fields']
             
-            # Set is_computed=True if computation_source is provided
-            if 'computation_source' in fields and fields['computation_source']:
+            # Only set is_computed=True if computation_source is provided AND is_computed is not explicitly set
+            if 'computation_source' in fields and fields['computation_source'] and 'is_computed' not in fields:
                 fields['is_computed'] = True
             
             # Try to find by key first (preferred) or by name+scope if key not available

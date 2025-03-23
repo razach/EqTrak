@@ -2,7 +2,7 @@ from django import template
 from django.contrib.contenttypes.models import ContentType
 from performance.models import PerformanceSettings, PerformanceMetric
 from performance.services import PerformanceService
-from performance.metrics import is_metric_calculation_enabled, PERFORMANCE_METRICS
+from performance.integration import is_feature_enabled as is_metric_calculation_enabled, PERFORMANCE_METRICS
 from django.apps import apps
 from django.conf import settings
 
@@ -96,6 +96,39 @@ def format_gain_loss(value, include_percent=True):
         return '<span class="text-muted">N/A</span>'
 
 @register.simple_tag
+def format_currency(value, symbol='$'):
+    """
+    Format a currency value with appropriate styling.
+    
+    Args:
+        value: The numeric value to format
+        symbol: Currency symbol to use
+    
+    Returns:
+        Formatted HTML string with appropriate CSS class
+    """
+    if value is None:
+        return '<span class="text-muted">N/A</span>'
+    
+    try:
+        # Ensure we have a numeric value - convert Decimal to float
+        value = float(value)
+        
+        # Determine color class
+        css_class = 'text-success' if value > 0 else 'text-danger' if value < 0 else 'text-muted'
+        
+        # Format number with comma separators and two decimal places
+        if value >= 0:
+            formatted_value = f"{symbol}{value:,.2f}"
+        else:
+            formatted_value = f"{symbol}{value:,.2f}"
+        
+        return f'<span class="{css_class}">{formatted_value}</span>'
+    except (ValueError, TypeError):
+        # Fallback for non-numeric values
+        return '<span class="text-muted">N/A</span>'
+
+@register.simple_tag
 def calculate_position_performance(position, user=None):
     """
     Calculate performance for a position.
@@ -108,6 +141,14 @@ def calculate_portfolio_performance(portfolio, user=None):
     Calculate performance for a portfolio.
     """
     return PerformanceService.calculate_portfolio_performance(portfolio, user=user)
+
+@register.simple_tag
+def calculate_transaction_performance(transaction, user=None):
+    """
+    Calculate performance for a transaction.
+    Only sale transactions have meaningful performance metrics.
+    """
+    return PerformanceService.calculate_transaction_performance(transaction, user=user)
 
 @register.simple_tag
 def is_performance_metric(metric_name):

@@ -1,17 +1,17 @@
-{% load performance_tags %}
+{% load performance_tags portfolio_filters %}
 
 {% if is_performance_enabled %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
-            <i class="bi bi-graph-up-arrow me-1"></i> Performance
+            <i class="bi bi-graph-up-arrow me-1"></i> Portfolio Performance
         </h5>
-        <a href="{% url 'performance:position' position.portfolio.portfolio_id position.position_id %}" class="btn btn-sm btn-outline-primary">
+        <a href="{% url 'performance:portfolio' portfolio.portfolio_id %}" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-graph-up"></i> Detailed Analysis
         </a>
     </div>
     <div class="card-body">
-        {% calculate_position_performance position user as performance %}
+        {% calculate_portfolio_performance portfolio user as performance %}
         
         {% if performance %}
             {% if performance.status_message %}
@@ -31,7 +31,7 @@
             </div>
             <div class="row mb-3">
                 <div class="col-6">
-                    <div class="metric-label">Gain/Loss</div>
+                    <div class="metric-label">Total Gain/Loss</div>
                     <div class="metric-value">
                         {% format_currency performance.absolute_gain_loss %}
                     </div>
@@ -44,15 +44,31 @@
                 </div>
             </div>
             
-            <!-- Display Position Gain/Loss (Absolute) from metrics -->
+            <!-- Display Portfolio Return (Absolute) from metrics -->
             <div class="row mb-3">
-                <div class="col-12">
-                    <div class="metric-label">Position Gain/Loss (Absolute)</div>
+                <div class="col-6">
+                    <div class="metric-label">Portfolio Return (Absolute)</div>
                     <div class="metric-value">
-                        {% if position %}
-                            {% with absolute_gain=position|position_metric_value:'Position Gain/Loss (Absolute)' %}
-                                {% if absolute_gain != None %}
-                                    {% format_currency absolute_gain %}
+                        {% if portfolio %}
+                            {% with absolute_return=portfolio|portfolio_metric_value:'Portfolio Return (Absolute)' %}
+                                {% if absolute_return != None %}
+                                    {% format_currency absolute_return %}
+                                {% else %}
+                                    <span class="text-muted">Not available</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">Not available</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-label">Time-Weighted Return</div>
+                    <div class="metric-value">
+                        {% if portfolio %}
+                            {% with twr=portfolio|portfolio_metric_value:'Portfolio Time-Weighted Return' %}
+                                {% if twr %}
+                                    {% format_gain_loss twr include_percent=True %}
                                 {% else %}
                                     <span class="text-muted">Not available</span>
                                 {% endif %}
@@ -69,7 +85,7 @@
             {% endif %}
         {% else %}
         <div class="alert alert-info mb-0">
-            <i class="bi bi-info-circle me-1"></i> Performance data is not available for this position.
+            <i class="bi bi-info-circle me-1"></i> Performance data is not available for this portfolio.
         </div>
         {% endif %}
     </div>

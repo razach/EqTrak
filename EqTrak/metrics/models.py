@@ -32,6 +32,7 @@ class MetricType(models.Model):
         ('total_value', 'Total Portfolio Value'),
         ('cash_balance', 'Cash Balance'),
         ('portfolio_return', 'Portfolio Return'),
+        ('time_weighted_return', 'Time-Weighted Return'),
         # Transaction metrics
         ('transaction_impact', 'Transaction Impact'),
         ('fee_percentage', 'Fee Percentage')
@@ -70,6 +71,25 @@ class MetricType(models.Model):
             query['is_system'] = False
         return cls.objects.filter(**query).order_by('computation_order', 'name')
 
+    @classmethod
+    def is_performance_enabled(cls, user=None):
+        """
+        Check if performance calculations are enabled.
+        Provides a consistent interface for checking across the app.
+        
+        Args:
+            user: Optional user to check settings for
+            
+        Returns:
+            Boolean indicating if performance is enabled
+        """
+        try:
+            from performance.services import PerformanceCalculationService
+            return PerformanceCalculationService.is_enabled(user=user)
+        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
+            # If we can't access the performance service, assume disabled
+            return False
+
     def compute_value(self, target_object):
         """Compute the metric value for a target object (position, transaction, or portfolio)"""
         if not self.is_computed:
@@ -79,6 +99,13 @@ class MetricType(models.Model):
         if not self._validate_scope(target_object):
             return None
             
+        # Try using an external provider first (if registered)
+        from .providers import compute_metric_value
+        external_value = compute_metric_value(self.name, target_object)
+        if external_value is not None:
+            return external_value
+            
+        # Fall back to internal computation methods for standard metrics
         if self.computation_source == 'shares':
             return self._compute_shares(target_object)
         elif self.computation_source == 'avg_price':
@@ -87,14 +114,11 @@ class MetricType(models.Model):
             return self._compute_cost_basis(target_object)
         elif self.computation_source == 'current_value':
             return self._compute_current_value(target_object)
-        elif self.computation_source == 'position_gain':
-            return self._compute_gain(target_object)
         elif self.computation_source == 'total_value':
             return self._compute_portfolio_value(target_object)
-        elif self.computation_source == 'portfolio_return':
-            return self._compute_portfolio_return(target_object)
         elif self.computation_source == 'transaction_impact':
             return self._compute_transaction_impact(target_object)
+            
         return None
 
     def _validate_scope(self, target_object):
@@ -184,36 +208,6 @@ class MetricType(models.Model):
             
         return shares * market_price
 
-    def _compute_gain(self, position):
-        """
-        Calculate percentage gain/loss - delegates to performance module.
-        Returns None if performance module is disabled or unavailable.
-        """
-        try:
-            # Check if performance app is installed
-            performance_app = apps.get_app_config('performance')
-            
-            # Get references to performance module components
-            performance_settings = performance_app.module.models.PerformanceSettings
-            performance_service = performance_app.module.services.PerformanceService
-            
-            # Check if feature is enabled
-            if not performance_settings.is_feature_enabled():
-                return None
-                
-            # Get performance metric
-            performance_metric = performance_service.calculate_position_performance(position)
-            
-            # Return percentage gain/loss if available
-            if performance_metric:
-                return performance_metric.percentage_gain_loss
-                
-            return None
-            
-        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
-            # Any issues with the performance module means we can't calculate gain/loss
-            return None
-
     def _compute_portfolio_value(self, portfolio):
         """Calculate total portfolio value"""
         total_value = 0
@@ -228,36 +222,6 @@ class MetricType(models.Model):
             total_value += position_value
         
         return total_value
-
-    def _compute_portfolio_return(self, portfolio):
-        """
-        Calculate portfolio return percentage - delegates to performance module.
-        Returns None if performance module is disabled or unavailable.
-        """
-        try:
-            # Check if performance app is installed
-            performance_app = apps.get_app_config('performance')
-            
-            # Get references to performance module components
-            performance_settings = performance_app.module.models.PerformanceSettings
-            performance_service = performance_app.module.services.PerformanceService
-            
-            # Check if feature is enabled
-            if not performance_settings.is_feature_enabled():
-                return None
-                
-            # Get performance metric
-            performance_metric = performance_service.calculate_portfolio_performance(portfolio)
-            
-            # Return percentage gain/loss if available
-            if performance_metric:
-                return performance_metric.percentage_gain_loss
-                
-            return None
-            
-        except (LookupError, AttributeError, ImportError, ModuleNotFoundError):
-            # Any issues with the performance module means we can't calculate return
-            return None
 
     def _compute_transaction_impact(self, transaction):
         """Calculate transaction impact"""

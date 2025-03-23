@@ -55,6 +55,8 @@ class PerformanceMetric(models.Model):
     # Metadata
     calculation_date = models.DateTimeField(auto_now=True)
     is_realized = models.BooleanField(default=False)
+    status_message = models.CharField(max_length=255, blank=True, null=True, 
+                                    help_text="User-friendly message explaining why metrics couldn't be calculated")
     
     class Meta:
         indexes = [

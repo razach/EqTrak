@@ -1,0 +1,101 @@
+{% load performance_tags %}
+
+{% if is_performance_enabled %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-graph-up-arrow me-1"></i> Transaction Performance
+        </h5>
+        {% if transaction.transaction_type == 'SELL' %}
+        <a href="{% url 'performance:transaction' transaction.position.portfolio.portfolio_id transaction.position.position_id transaction.transaction_id %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-graph-up"></i> Detailed Analysis
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if transaction.transaction_type == 'SELL' %}
+            {% if performance_data %}
+                {% if performance_data.status_message %}
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle me-1"></i> {{ performance_data.status_message }}
+                </div>
+                {% else %}
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="metric-label">Cost Basis</div>
+                        <div class="metric-value">${{ performance_data.cost_basis|floatformat:2 }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-label">Sale Value</div>
+                        <div class="metric-value">${{ performance_data.current_value|floatformat:2 }}</div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="metric-label">Realized Gain/Loss</div>
+                        <div class="metric-value">
+                            {% format_gain_loss performance_data.absolute_gain_loss include_percent=False %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-label">% Return</div>
+                        <div class="metric-value">
+                            {% format_gain_loss performance_data.percentage_gain_loss include_percent=True %}
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i> Last calculated: {{ performance_data.calculation_date|date:"M d, Y H:i" }}
+                </small>
+                {% endif %}
+            {% else %}
+                {% calculate_transaction_performance transaction user as performance %}
+                
+                {% if performance %}
+                    {% if performance.status_message %}
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle me-1"></i> {{ performance.status_message }}
+                    </div>
+                    {% else %}
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="metric-label">Cost Basis</div>
+                            <div class="metric-value">${{ performance.cost_basis|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-label">Sale Value</div>
+                            <div class="metric-value">${{ performance.current_value|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="metric-label">Realized Gain/Loss</div>
+                            <div class="metric-value">
+                                {% format_gain_loss performance.absolute_gain_loss include_percent=False %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-label">% Return</div>
+                            <div class="metric-value">
+                                {% format_gain_loss performance.percentage_gain_loss include_percent=True %}
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i> Last calculated: {{ performance.calculation_date|date:"M d, Y H:i" }}
+                    </small>
+                    {% endif %}
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-1"></i> Performance data is not available for this transaction.
+                </div>
+                {% endif %}
+            {% endif %}
+        {% else %}
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle me-1"></i> Performance metrics are only available for sell transactions.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %} 

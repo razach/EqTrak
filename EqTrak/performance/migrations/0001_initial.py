@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name='PerformanceSettings',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('updates_enabled', models.BooleanField(default=True, help_text='Enable or disable performance metrics updates system-wide', verbose_name='Updates Enabled')),
+                ('updates_enabled', models.BooleanField(default=True, help_text='Enable or disable performance calculations globally')),
                 ('last_modified', models.DateTimeField(auto_now=True)),
             ],
             options={
@@ -28,13 +28,14 @@ class Migration(migrations.Migration):
             name='PerformanceMetric',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('object_id', models.PositiveIntegerField()),
+                ('object_id', models.CharField(max_length=40)),
                 ('cost_basis', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
                 ('current_value', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
                 ('absolute_gain_loss', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
                 ('percentage_gain_loss', models.DecimalField(decimal_places=2, default=0, max_digits=10)),
                 ('calculation_date', models.DateTimeField(auto_now=True)),
                 ('is_realized', models.BooleanField(default=False)),
+                ('status_message', models.CharField(blank=True, help_text="User-friendly message explaining why metrics couldn't be calculated", max_length=255, null=True)),
                 ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype')),
             ],
             options={
@@ -44,6 +45,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='performancemetric',
-            index=models.Index(fields=['content_type', 'object_id'], name='performance_content_6db675_idx'),
+            index=models.Index(fields=['content_type', 'object_id'], name='performance_content_2d77c5_idx'),
         ),
     ] 
