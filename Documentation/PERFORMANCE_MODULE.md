@@ -187,6 +187,113 @@ To also clear existing performance metric values:
 python manage.py disable_performance --clear-data
 ```
 
+## Provider System
+
+The Performance Module uses a provider system to integrate with the metrics module, allowing for clean separation of concerns:
+
+### Provider Architecture
+
+```
+metrics/                  # Metrics app
+├── providers.py         # Provider registry system
+│
+performance/              # Performance app
+├── providers.py         # Performance-specific providers
+├── apps.py              # Registers providers on startup
+└── integration.py       # Integration functions and constants
+```
+
+#### Metrics Provider Registry
+
+The metrics app implements a simple provider registry that allows other apps to register calculation functions:
+
+```python
+# metrics/providers.py
+METRIC_PROVIDERS = {}  # Dictionary mapping metric names to provider functions
+
+def register_provider(metric_name, provider_function):
+    """Register a function that can compute values for a specific metric"""
+    global METRIC_PROVIDERS
+    METRIC_PROVIDERS[metric_name] = provider_function
+    
+def compute_metric_value(metric_name, target_object):
+    """Compute a metric value using the registered provider"""
+    provider = get_provider(metric_name)
+    if provider:
+        return provider(target_object)
+    return None
+```
+
+#### Performance Provider Registration
+
+The performance app registers its calculation functions during app initialization:
+
+```python
+# performance/providers.py
+def register_providers():
+    """Register all performance metric providers with the metrics system"""
+    from metrics.providers import register_provider
+    
+    # Register position gain/loss providers
+    register_provider(POSITION_GAIN, PerformanceCalculationService.get_position_gain_percentage)
+    register_provider(POSITION_GAIN_ABSOLUTE, PerformanceCalculationService.get_position_gain_absolute)
+    
+    # Register portfolio return providers
+    register_provider(PORTFOLIO_RETURN, PerformanceCalculationService.get_portfolio_return_percentage)
+    register_provider(PORTFOLIO_RETURN_ABSOLUTE, PerformanceCalculationService.get_portfolio_return_absolute)
+    register_provider(PORTFOLIO_TWR, PerformanceCalculationService.get_time_weighted_return_percentage)
+```
+
+#### App Initialization
+
+Providers are registered when the app starts:
+
+```python
+# performance/apps.py
+class PerformanceConfig(AppConfig):
+    # ...
+    
+    def ready(self):
+        """Initialize the app when Django starts"""
+        # Import and register performance metric providers
+        from .providers import register_providers
+        register_providers()
+        # ...
+```
+
+### Benefits of Provider System
+
+1. **Clean Separation of Concerns**:
+   - The metrics app is agnostic about how metric values are calculated
+   - The performance app contains all performance-specific calculation logic
+   - No circular dependencies between the apps
+
+2. **Extensibility**:
+   - Other apps can register their own metric providers using the same mechanism
+   - The metrics app doesn't need to be modified when new metric types are added
+
+3. **Simplified Metrics Model**:
+   - The metrics app's `MetricType.compute_value` method first checks for registered providers
+   - Falls back to internal computation only when no provider is registered
+   - Avoids complex conditional logic in the metrics app 
+
+### Integration Functions
+
+The performance app uses an integration module to cleanly separate calculation logic from metrics storage:
+
+```python
+# performance/integration.py
+def store_position_gain_percentage(position, value):
+    """Store position gain/loss percentage in the metrics system"""
+    # ...
+
+def store_position_gain_absolute(position, value):
+    """Store position gain/loss absolute value in the metrics system"""
+    # ...
+```
+
+These integration functions are called by the performance services after calculations are complete, providing a clean interface between the performance and metrics systems.
+
 ## Troubleshooting
 
 See the [Development Setup](DEVELOPMENT_SETUP.md#troubleshooting) guide for common issues and solutions related to the performance module. 
